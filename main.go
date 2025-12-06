@@ -50,6 +50,7 @@ func main() {
 
 	// Services
 	authService := services.NewAuthService(authRepo, conf)
+	notificationHub := services.NewNotificationHub()
 
 	// Server setup
 	s := &server.Server{
@@ -62,6 +63,7 @@ func main() {
 		RoomServiceRepository:  roomServiceRepo,
 		GuestServiceRepository: guestServiceRepo,
 		StaffRepository:        staffRepo,
+		NotificationHub:        notificationHub,
 		DB:                     gormDB.DB,
 	}
 

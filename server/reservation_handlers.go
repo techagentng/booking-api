@@ -203,6 +203,27 @@ func (s *Server) handleCreateReservation() gin.HandlerFunc {
 			s.DB.Save(reservation)
 		}
 
+		// Send new booking notification
+		guestName := ""
+		roomNumber := ""
+		roomType := ""
+		if reservation.Guest != nil {
+			guestName = reservation.Guest.Name
+		}
+		if reservation.Room != nil {
+			roomNumber = reservation.Room.RoomNumber
+			roomType = reservation.Room.RoomType
+		}
+		s.NotificationHub.NotifyNewBooking(
+			reservation.ID,
+			guestName,
+			roomNumber,
+			roomType,
+			reservation.CheckInDate.Format("2006-01-02"),
+			reservation.CheckOutDate.Format("2006-01-02"),
+			reservation.TotalAmount,
+		)
+
 		response.JSON(c, "Reservation created successfully", http.StatusCreated, reservation, nil)
 	}
 }
@@ -313,6 +334,17 @@ func (s *Server) handleCheckIn() gin.HandlerFunc {
 			return
 		}
 
+		// Send check-in notification
+		guestName := ""
+		roomNumber := ""
+		if reservation.Guest != nil {
+			guestName = reservation.Guest.Name
+		}
+		if reservation.Room != nil {
+			roomNumber = reservation.Room.RoomNumber
+		}
+		s.NotificationHub.NotifyCheckIn(reservation.ID, guestName, roomNumber)
+
 		response.JSON(c, "Guest checked in successfully", http.StatusOK, gin.H{
 			"id":            reservation.ID,
 			"status":        reservation.Status,
@@ -350,6 +382,17 @@ func (s *Server) handleCheckOut() gin.HandlerFunc {
 				log.Printf("handleCheckOut: error generating insights for guest %d: %v", guestID, err)
 			}
 		}(reservation.GuestID)
+
+		// Send check-out notification
+		guestName := ""
+		roomNumber := ""
+		if reservation.Guest != nil {
+			guestName = reservation.Guest.Name
+		}
+		if reservation.Room != nil {
+			roomNumber = reservation.Room.RoomNumber
+		}
+		s.NotificationHub.NotifyCheckOut(reservation.ID, guestName, roomNumber, reservation.TotalAmount)
 
 		response.JSON(c, "Guest checked out successfully", http.StatusOK, gin.H{
 			"id":             reservation.ID,
@@ -491,5 +534,90 @@ func (s *Server) handleGetDashboardStats() gin.HandlerFunc {
 		}
 
 		response.JSON(c, "Dashboard statistics retrieved successfully", http.StatusOK, stats, nil)
+	}
+}
+
+// handleGetRecentActivity returns the 3 newest bookings and 3 guest preferences
+func (s *Server) handleGetRecentActivity() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Get 3 newest reservations with guest and room details
+		reservations, err := s.ReservationRepository.GetRecentReservations(3)
+		if err != nil {
+			log.Printf("handleGetRecentActivity: error fetching reservations: %v", err)
+			response.JSON(c, "Failed to fetch recent activity", http.StatusInternalServerError, nil, err)
+			return
+		}
+
+		// Format bookings
+		type RecentBooking struct {
+			ID          uint    `json:"id"`
+			Date        string  `json:"date"`
+			GuestName   string  `json:"guest_name"`
+			RoomNumber  string  `json:"room_number"`
+			RoomType    string  `json:"room_type"`
+			CheckIn     string  `json:"check_in"`
+			CheckOut    string  `json:"check_out"`
+			Status      string  `json:"status"`
+			TotalAmount float64 `json:"total_amount"`
+		}
+
+		recentBookings := make([]RecentBooking, 0, len(reservations))
+		for _, r := range reservations {
+			booking := RecentBooking{
+				ID:          r.ID,
+				Date:        r.CreatedAt.Format("2006-01-02"),
+				Status:      string(r.Status),
+				CheckIn:     r.CheckInDate.Format("2006-01-02"),
+				CheckOut:    r.CheckOutDate.Format("2006-01-02"),
+				TotalAmount: r.TotalAmount,
+			}
+			if r.Guest != nil {
+				booking.GuestName = r.Guest.Name
+			}
+			if r.Room != nil {
+				booking.RoomNumber = r.Room.RoomNumber
+				booking.RoomType = r.Room.RoomType
+			}
+			recentBookings = append(recentBookings, booking)
+		}
+
+		// Get 3 recent guest preferences
+		type GuestPreference struct {
+			GuestID         uint     `json:"guest_id"`
+			GuestName       string   `json:"guest_name"`
+			RoomFloors      []string `json:"room_floors"`
+			MealTypes       []string `json:"meal_types"`
+			RoomTypes       []string `json:"room_types"`
+			SpecialRequests []string `json:"special_requests"`
+		}
+
+		preferences, err := s.GuestRepository.GetRecentGuestPreferences(3)
+		if err != nil {
+			log.Printf("handleGetRecentActivity: error fetching preferences: %v", err)
+			// Continue with empty preferences instead of failing
+			preferences = nil
+		}
+
+		recentPreferences := make([]GuestPreference, 0)
+		if preferences != nil {
+			for _, p := range preferences {
+				pref := GuestPreference{
+					GuestID:         p.GuestID,
+					RoomFloors:      []string(p.RoomFloors),
+					MealTypes:       []string(p.MealTypes),
+					RoomTypes:       []string(p.RoomTypes),
+					SpecialRequests: []string(p.SpecialRequests),
+				}
+				if p.Guest != nil {
+					pref.GuestName = p.Guest.Name
+				}
+				recentPreferences = append(recentPreferences, pref)
+			}
+		}
+
+		response.JSON(c, "Recent activity retrieved successfully", http.StatusOK, gin.H{
+			"recent_bookings":   recentBookings,
+			"guest_preferences": recentPreferences,
+		}, nil)
 	}
 }

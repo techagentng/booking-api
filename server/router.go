@@ -55,6 +55,171 @@ func (s *Server) defineRoutes(router *gin.Engine) {
 	// Health check
 	router.GET("/health", s.handleHealthCheck())
 
+	// Frontend routes (without /api/v1 prefix)
+	frontend := router.Group("")
+	{
+		// Dashboard routes
+		frontend.GET("/reservations/dashboard", s.Authorize(), s.handleGetDashboardStats())
+		frontend.GET("/reservations/recent-activity", s.Authorize(), s.handleGetRecentActivity())
+
+		// Reservations with query parameters
+		frontend.GET("/reservations", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/reservations"
+			router.HandleContext(c)
+		})
+
+		frontend.POST("/reservations", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/reservations"
+			router.HandleContext(c)
+		})
+
+		// Guest routes
+		frontend.GET("/guests", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/guests"
+			router.HandleContext(c)
+		})
+
+		frontend.POST("/guests", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/guests"
+			router.HandleContext(c)
+		})
+
+		frontend.GET("/guests/:id", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/guests/" + c.Param("id")
+			router.HandleContext(c)
+		})
+
+		frontend.GET("/guests/:id/preferences", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/guests/" + c.Param("id") + "/preferences"
+			router.HandleContext(c)
+		})
+
+		frontend.GET("/guests/:id/ai-insights", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/guests/" + c.Param("id") + "/ai-insights"
+			router.HandleContext(c)
+		})
+
+		frontend.GET("/guests/:id/history", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/guests/" + c.Param("id") + "/history"
+			router.HandleContext(c)
+		})
+
+		// Staff routes
+		frontend.GET("/staff", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/staff"
+			router.HandleContext(c)
+		})
+
+		frontend.GET("/staff/available", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/staff/available"
+			router.HandleContext(c)
+		})
+
+		frontend.GET("/staff/stats", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/staff/stats"
+			router.HandleContext(c)
+		})
+
+		frontend.GET("/staff/on-duty", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/staff/on-duty"
+			router.HandleContext(c)
+		})
+
+		// Service requests with query parameters
+		frontend.GET("/service-requests", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/service-requests"
+			router.HandleContext(c)
+		})
+
+		// Room routes
+		frontend.GET("/rooms/summary", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/rooms/summary"
+			router.HandleContext(c)
+		})
+
+		frontend.GET("/rooms", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/rooms"
+			router.HandleContext(c)
+		})
+
+		frontend.POST("/rooms", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/rooms"
+			router.HandleContext(c)
+		})
+
+		frontend.GET("/rooms/guest/:room_number", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/rooms/guest/" + c.Param("room_number")
+			router.HandleContext(c)
+		})
+
+		// Room service routes
+		frontend.GET("/room-service/menu", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/room-service/menu"
+			router.HandleContext(c)
+		})
+
+		frontend.GET("/room-service/menu/categories", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/room-service/menu/categories"
+			router.HandleContext(c)
+		})
+
+		frontend.POST("/room-service/orders", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/room-service/orders"
+			router.HandleContext(c)
+		})
+
+		frontend.GET("/room-service/orders/guest/:guest_id/active", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/room-service/orders/guest/" + c.Param("guest_id") + "/active"
+			router.HandleContext(c)
+		})
+
+		frontend.GET("/services/guest/:guest_id", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/services/guest/" + c.Param("guest_id")
+			router.HandleContext(c)
+		})
+
+		frontend.POST("/services/housekeeping", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/services/housekeeping"
+			router.HandleContext(c)
+		})
+
+		frontend.POST("/services/maintenance", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/services/maintenance"
+			router.HandleContext(c)
+		})
+
+		// Reservation status update
+		frontend.PUT("/reservations/:id/status", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/reservations/" + c.Param("id") + "/status"
+			router.HandleContext(c)
+		})
+
+		// Reservation check-in/check-out
+		frontend.POST("/reservations/:id/checkin", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/reservations/" + c.Param("id") + "/checkin"
+			router.HandleContext(c)
+		})
+
+		frontend.POST("/reservations/:id/checkout", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/reservations/" + c.Param("id") + "/checkout"
+			router.HandleContext(c)
+		})
+
+		// Service request status update (public - no auth, for staff tablets)
+		frontend.GET("/service-requests/assigned", func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/service-requests/assigned"
+			router.HandleContext(c)
+		})
+
+		frontend.PUT("/service-requests/assigned/:id/status", func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/service-requests/assigned/" + c.Param("id") + "/status"
+			router.HandleContext(c)
+		})
+
+		// Notification routes
+		frontend.GET("/notifications/stream", s.handleSSENotificationsPublic())
+	}
+
 	// API v1 routes
 	v1 := router.Group("/api/v1")
 	{
@@ -68,6 +233,15 @@ func (s *Server) defineRoutes(router *gin.Engine) {
 		authorized.Use(s.Authorize())
 		{
 			authorized.POST("/logout", s.handleLogout())
+		}
+
+		// Notification routes (SSE)
+		v1.GET("/notifications/stream", s.handleSSENotificationsPublic()) // Public for easy testing
+		notifications := v1.Group("/notifications")
+		notifications.Use(s.Authorize())
+		{
+			notifications.GET("/stats", s.handleGetNotificationStats())
+			notifications.POST("/test", s.handleTestNotification())
 		}
 
 		// Guest routes
@@ -92,6 +266,8 @@ func (s *Server) defineRoutes(router *gin.Engine) {
 			reservations.GET("", s.handleGetReservations())
 			reservations.GET("/stats", s.handleGetReservationStats())
 			reservations.GET("/checkin/stats", s.handleGetCheckInStats())
+			reservations.GET("/dashboard", s.handleGetDashboardStats())
+			reservations.GET("/recent-activity", s.handleGetRecentActivity())
 			reservations.GET("/guest/:guestID", s.handleGetReservationsByGuest())
 			reservations.GET("/room/:roomID", s.handleGetReservationsByRoom())
 			reservations.GET("/:id", s.handleGetReservationByID())

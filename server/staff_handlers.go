@@ -507,6 +507,18 @@ func (s *Server) handleCompleteServiceRequest() gin.HandlerFunc {
 			return
 		}
 
+		// Send service completed notification
+		roomNumber := ""
+		if request.Room != nil {
+			roomNumber = request.Room.RoomNumber
+		}
+		s.NotificationHub.NotifyServiceCompleted(
+			request.ID,
+			request.Type,
+			roomNumber,
+			completedBy,
+		)
+
 		response.JSON(c, "Request completed", http.StatusOK, nil, nil)
 	}
 }

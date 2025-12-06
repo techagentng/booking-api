@@ -1,6 +1,9 @@
 package server
 
 import (
+	"bytes"
+	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -10,6 +13,8 @@ import (
 	"hotel/services"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
+	// Import the errors package for enhanced error handling
 )
 
 // handleGetRooms returns all rooms with pagination, search, and status filter
@@ -70,23 +75,41 @@ func (s *Server) handleCreateRoom() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req models.CreateRoomRequest
 
+		// Log raw request body for debugging
+		body, _ := c.GetRawData()
+		log.Printf("Create room request body: %s", string(body))
+		c.Request.Body = io.NopCloser(bytes.NewBuffer(body)) // Reset the request body
+
 		if err := c.ShouldBindJSON(&req); err != nil {
-			response.JSON(c, "Invalid request body", http.StatusBadRequest, nil, err)
+			errMsg := "Invalid request: "
+			if validationErrs, ok := err.(validator.ValidationErrors); ok {
+				for _, fieldErr := range validationErrs {
+					errMsg += fmt.Sprintf("Field '%s' failed on '%s' validation; ", fieldErr.Field(), fieldErr.Tag())
+				}
+			} else {
+				errMsg += err.Error()
+			}
+			log.Printf("Validation error: %s", errMsg)
+			response.JSON(c, errMsg, http.StatusBadRequest, nil, err)
 			return
 		}
+
+		log.Printf("Creating room with data: %+v", req)
 
 		roomService := services.NewRoomService(s.RoomRepository)
 		room, err := roomService.CreateRoom(&req)
 		if err != nil {
-			log.Printf("handleCreateRoom: error creating room: %v", err)
+			errMsg := fmt.Sprintf("Room creation failed: %v", err)
+			log.Println(errMsg)
 			if err.Error() == "room number already exists" {
-				response.JSON(c, "Room creation failed", http.StatusConflict, nil, err)
+				response.JSON(c, errMsg, http.StatusConflict, nil, err)
 				return
 			}
-			response.JSON(c, "Room creation failed", http.StatusBadRequest, nil, err)
+			response.JSON(c, errMsg, http.StatusBadRequest, nil, err)
 			return
 		}
 
+		log.Printf("Room created successfully: %+v", room)
 		response.JSON(c, "Room created successfully", http.StatusCreated, room, nil)
 	}
 }

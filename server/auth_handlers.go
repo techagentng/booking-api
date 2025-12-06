@@ -82,6 +82,10 @@ func (s *Server) handleSignup() gin.HandlerFunc {
 
 		// Set auth cookie and return response
 		setAuthCookie(c, accessToken)
+
+		// Send signup notification
+		s.NotificationHub.NotifySignUp(createdUser.ID, createdUser.Email, createdUser.Fullname, "")
+
 		response.JSON(c, "Signup successful", http.StatusCreated, models.LoginResponse{
 			UserResponse: models.UserResponse{
 				ID:        createdUser.ID,
@@ -113,6 +117,10 @@ func (s *Server) handleLogin() gin.HandlerFunc {
 		}
 
 		setAuthCookie(c, loginResponse.AccessToken)
+
+		// Send sign-in notification
+		s.NotificationHub.NotifySignIn(loginResponse.ID, loginResponse.Email, loginResponse.Fullname, "")
+
 		response.JSON(c, "Login successful", http.StatusOK, loginResponse, nil)
 	}
 }
@@ -134,6 +142,10 @@ func (s *Server) handleGoogleLogin() gin.HandlerFunc {
 
 		clearAuthCookie(c)
 		setAuthCookie(c, loginResponse.AccessToken)
+
+		// Send sign-in notification
+		s.NotificationHub.NotifySignIn(loginResponse.ID, loginResponse.Email, loginResponse.Fullname, "")
+
 		response.JSON(c, "Login successful", http.StatusOK, loginResponse, nil)
 	}
 }

@@ -24,6 +24,7 @@ type GuestRepository interface {
 	UpdateGuestAIInsights(guestID uint, insights *models.GuestAIInsights) (*models.GuestAIInsights, error)
 	GetGuestStatistics(guestID uint) (*models.GuestStatistics, error)
 	GetGuestServiceUsage(guestID uint) ([]models.ServiceUsageItem, error)
+	GetRecentGuestPreferences(limit int) ([]models.GuestPreferences, error)
 }
 
 // guestRepository implements GuestRepository
@@ -360,4 +361,14 @@ func (r *guestRepository) GetGuestServiceUsage(guestID uint) ([]models.ServiceUs
 	}
 
 	return usage, nil
+}
+
+// GetRecentGuestPreferences returns the most recent guest preferences with guest details
+func (r *guestRepository) GetRecentGuestPreferences(limit int) ([]models.GuestPreferences, error) {
+	var preferences []models.GuestPreferences
+	err := r.db.Preload("Guest").
+		Order("updated_at DESC").
+		Limit(limit).
+		Find(&preferences).Error
+	return preferences, err
 }

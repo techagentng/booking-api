@@ -26,6 +26,7 @@ type ReservationRepository interface {
 	IsRoomAvailable(roomID uint, checkIn, checkOut time.Time, excludeReservationID uint) (bool, error)
 	GenerateConfirmationNumber() (string, error)
 	GetDashboardStats() (*models.DashboardStats, error)
+	GetRecentReservations(limit int) ([]models.Reservation, error)
 }
 
 // ReservationQueryParams holds query parameters for listing reservations
@@ -454,4 +455,14 @@ func (r *reservationRepository) GetDashboardStats() (*models.DashboardStats, err
 	r.db.Model(&models.Guest{}).Count(&stats.TotalGuests)
 
 	return stats, nil
+}
+
+// GetRecentReservations returns the most recent reservations with guest and room details
+func (r *reservationRepository) GetRecentReservations(limit int) ([]models.Reservation, error) {
+	var reservations []models.Reservation
+	err := r.db.Preload("Guest").Preload("Room").
+		Order("created_at DESC").
+		Limit(limit).
+		Find(&reservations).Error
+	return reservations, err
 }

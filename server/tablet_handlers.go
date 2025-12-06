@@ -187,6 +187,20 @@ func (s *Server) handleCreateHousekeepingRequest() gin.HandlerFunc {
 			return
 		}
 
+		// Send service request notification
+		priority := result.Priority
+		if priority == "" {
+			priority = "normal"
+		}
+		s.NotificationHub.NotifyServiceRequest(
+			result.ID,
+			"Housekeeping",
+			"", // Room number not in response
+			"", // Guest name not in response
+			priority,
+			result.ServiceType,
+		)
+
 		response.JSON(c, "Service request created", http.StatusCreated, result, nil)
 	}
 }
@@ -216,6 +230,20 @@ func (s *Server) handleCreateMaintenanceRequest() gin.HandlerFunc {
 			response.JSON(c, "Failed to create request", http.StatusBadRequest, nil, err)
 			return
 		}
+
+		// Send service request notification
+		priority := result.Priority
+		if priority == "" {
+			priority = "normal"
+		}
+		s.NotificationHub.NotifyServiceRequest(
+			result.ID,
+			"Maintenance",
+			"", // Room number not in response
+			"", // Guest name not in response
+			priority,
+			result.IssueType,
+		)
 
 		response.JSON(c, "Maintenance request created", http.StatusCreated, result, nil)
 	}

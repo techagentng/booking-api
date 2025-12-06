@@ -86,6 +86,9 @@ func (s *Server) handleCreateGuest() gin.HandlerFunc {
 			return
 		}
 
+		// Send new guest notification
+		s.NotificationHub.NotifyNewGuest(guest.ID, guest.Name, "", guest.Email, guest.Phone)
+
 		response.JSON(c, "Guest created successfully", http.StatusCreated, guest, nil)
 	}
 }
