@@ -73,6 +73,12 @@ func (s *Server) defineRoutes(router *gin.Engine) {
 			router.HandleContext(c)
 		})
 
+		// Public reservation (no auth required)
+		frontend.POST("/reservations/public", func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/reservations/public"
+			router.HandleContext(c)
+		})
+
 		// Guest routes
 		frontend.GET("/guests", s.Authorize(), func(c *gin.Context) {
 			c.Request.URL.Path = "/api/v1/guests"
@@ -125,9 +131,39 @@ func (s *Server) defineRoutes(router *gin.Engine) {
 			router.HandleContext(c)
 		})
 
+		frontend.POST("/staff", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/staff"
+			router.HandleContext(c)
+		})
+
+		frontend.PUT("/staff/:id", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/staff/" + c.Param("id")
+			router.HandleContext(c)
+		})
+
+		frontend.DELETE("/staff/:id", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/staff/" + c.Param("id")
+			router.HandleContext(c)
+		})
+
 		// Service requests with query parameters
 		frontend.GET("/service-requests", s.Authorize(), func(c *gin.Context) {
 			c.Request.URL.Path = "/api/v1/service-requests"
+			router.HandleContext(c)
+		})
+
+		frontend.POST("/service-requests/:id/auto-assign", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/service-requests/" + c.Param("id") + "/auto-assign"
+			router.HandleContext(c)
+		})
+
+		frontend.POST("/service-requests/:id/assign", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/service-requests/" + c.Param("id") + "/assign"
+			router.HandleContext(c)
+		})
+
+		frontend.POST("/service-requests/:id/complete", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/service-requests/" + c.Param("id") + "/complete"
 			router.HandleContext(c)
 		})
 
@@ -149,6 +185,21 @@ func (s *Server) defineRoutes(router *gin.Engine) {
 
 		frontend.GET("/rooms/guest/:room_number", s.Authorize(), func(c *gin.Context) {
 			c.Request.URL.Path = "/api/v1/rooms/guest/" + c.Param("room_number")
+			router.HandleContext(c)
+		})
+
+		frontend.GET("/rooms/:id", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/rooms/" + c.Param("id")
+			router.HandleContext(c)
+		})
+
+		frontend.PUT("/rooms/:id", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/rooms/" + c.Param("id")
+			router.HandleContext(c)
+		})
+
+		frontend.DELETE("/rooms/:id", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/rooms/" + c.Param("id")
 			router.HandleContext(c)
 		})
 
