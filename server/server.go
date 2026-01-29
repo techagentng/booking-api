@@ -27,6 +27,7 @@ type Server struct {
 	RoomServiceRepository  db.RoomServiceRepository
 	GuestServiceRepository db.GuestServiceRepository
 	StaffRepository        db.StaffRepository
+	HallBookingRepository  db.HallBookingRepository
 	NotificationHub        *services.NotificationHub
 	DB                     *gorm.DB
 }

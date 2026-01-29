@@ -146,6 +146,62 @@ func (s *Server) defineRoutes(router *gin.Engine) {
 			router.HandleContext(c)
 		})
 
+		// Hall Booking routes
+		frontend.POST("/hall-bookings", func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/hall-bookings"
+			router.HandleContext(c)
+		})
+
+		frontend.GET("/hall-bookings", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/hall-bookings"
+			router.HandleContext(c)
+		})
+
+		frontend.GET("/hall-bookings/:id", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/hall-bookings/" + c.Param("id")
+			router.HandleContext(c)
+		})
+
+		frontend.PUT("/hall-bookings/:id", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/hall-bookings/" + c.Param("id")
+			router.HandleContext(c)
+		})
+
+		frontend.DELETE("/hall-bookings/:id", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/hall-bookings/" + c.Param("id")
+			router.HandleContext(c)
+		})
+
+		frontend.PUT("/hall-bookings/:id/status", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/hall-bookings/" + c.Param("id") + "/status"
+			router.HandleContext(c)
+		})
+
+		frontend.GET("/hall-bookings/booking/:booking_id", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/hall-bookings/booking/" + c.Param("booking_id")
+			router.HandleContext(c)
+		})
+
+		frontend.GET("/hall-bookings/availability", func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/hall-bookings/availability"
+			router.HandleContext(c)
+		})
+
+		frontend.GET("/hall-bookings/availability/:date", func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/hall-bookings/availability/" + c.Param("date")
+			router.HandleContext(c)
+		})
+
+		frontend.GET("/hall-bookings/date/:date", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/hall-bookings/date/" + c.Param("date")
+			router.HandleContext(c)
+		})
+
+		frontend.GET("/hall-bookings/range", s.Authorize(), func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/hall-bookings/range"
+			router.HandleContext(c)
+		})
+
 		// Service requests with query parameters
 		frontend.GET("/service-requests", s.Authorize(), func(c *gin.Context) {
 			c.Request.URL.Path = "/api/v1/service-requests"
@@ -420,6 +476,25 @@ func (s *Server) defineRoutes(router *gin.Engine) {
 			staff.POST("/:id/clock-out", s.handleClockOut())
 			staff.PUT("/:id/availability", s.handleSetAvailability())
 		}
+
+		// Hall Booking routes
+		hallBookings := v1.Group("/hall-bookings")
+		hallBookings.Use(s.Authorize())
+		{
+			hallBookings.GET("", s.handleGetHallBookings())
+			hallBookings.GET("/:id", s.handleGetHallBookingByID())
+			hallBookings.PUT("/:id", s.handleUpdateHallBooking())
+			hallBookings.DELETE("/:id", s.handleDeleteHallBooking())
+			hallBookings.PUT("/:id/status", s.handleUpdateHallBookingStatus())
+			hallBookings.GET("/booking/:booking_id", s.handleGetHallBookingByBookingID())
+			hallBookings.GET("/date/:date", s.handleGetHallBookingsByDate())
+			hallBookings.GET("/range", s.handleGetHallBookingsByDateRange())
+		}
+
+		// Public Hall Booking routes (no auth required)
+		v1.POST("/hall-bookings", s.handleCreateHallBooking())
+		v1.GET("/hall-bookings/availability", s.handleCheckHallAvailability())
+		v1.GET("/hall-bookings/availability/:date", s.handleGetHallAvailability())
 
 		// Hotel Info (for tablet)
 		v1.GET("/hotel/info", s.handleGetHotelInfo())

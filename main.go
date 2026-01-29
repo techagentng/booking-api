@@ -47,6 +47,7 @@ func main() {
 	roomServiceRepo := db.NewRoomServiceRepository(gormDB.DB)
 	guestServiceRepo := db.NewGuestServiceRepository(gormDB.DB)
 	staffRepo := db.NewStaffRepository(gormDB.DB)
+	hallBookingRepo := db.NewHallBookingRepository(gormDB.DB)
 
 	// Services
 	authService := services.NewAuthService(authRepo, conf)
@@ -63,6 +64,7 @@ func main() {
 		RoomServiceRepository:  roomServiceRepo,
 		GuestServiceRepository: guestServiceRepo,
 		StaffRepository:        staffRepo,
+		HallBookingRepository:  hallBookingRepo,
 		NotificationHub:        notificationHub,
 		DB:                     gormDB.DB,
 	}
