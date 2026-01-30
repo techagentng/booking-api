@@ -18,18 +18,20 @@ import (
 )
 
 type Server struct {
-	Config                 *config.Config
-	AuthRepository         db.AuthRepository
-	AuthService            services.AuthService
-	GuestRepository        db.GuestRepository
-	RoomRepository         db.RoomRepository
-	ReservationRepository  db.ReservationRepository
-	RoomServiceRepository  db.RoomServiceRepository
-	GuestServiceRepository db.GuestServiceRepository
-	StaffRepository        db.StaffRepository
-	HallBookingRepository  db.HallBookingRepository
-	NotificationHub        *services.NotificationHub
-	DB                     *gorm.DB
+	Config                     *config.Config
+	AuthRepository             db.AuthRepository
+	AuthService                services.AuthService
+	GuestRepository            db.GuestRepository
+	RoomRepository             db.RoomRepository
+	ReservationRepository      db.ReservationRepository
+	RoomServiceRepository      db.RoomServiceRepository
+	GuestServiceRepository     db.GuestServiceRepository
+	StaffRepository            db.StaffRepository
+	HallBookingRepository      db.HallBookingRepository
+	AdminHallBookingRepository db.AdminHallBookingRepository
+	CalendarRepository         db.CalendarRepository
+	NotificationHub            *services.NotificationHub
+	DB                         *gorm.DB
 }
 
 // Server serves requests to DB with rout

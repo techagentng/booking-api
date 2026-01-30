@@ -187,10 +187,15 @@ func (r *hallBookingRepository) CheckHallAvailability(date string, startTime, en
 		return false, errors.New("invalid date format")
 	}
 
+	// Create date range for the query (start of day to end of day)
+	startOfDay := time.Date(parsedDate.Year(), parsedDate.Month(), parsedDate.Day(), 0, 0, 0, 0, parsedDate.Location())
+	endOfDay := time.Date(parsedDate.Year(), parsedDate.Month(), parsedDate.Day(), 23, 59, 59, 999999999, parsedDate.Location())
+
 	// Find bookings that overlap with the requested time slot
 	err = r.db.Model(&models.HallBooking{}).
-		Where("booking_date = ? AND status NOT IN ?",
-			parsedDate,
+		Where("booking_date BETWEEN ? AND ? AND status NOT IN ?",
+			startOfDay,
+			endOfDay,
 			[]string{"cancelled"}).
 		Where("(start_time < ? AND end_time > ?) OR (start_time < ? AND end_time > ?) OR (start_time >= ? AND end_time <= ?)",
 			endTime, startTime, // Overlaps from left
@@ -221,20 +226,26 @@ func (r *hallBookingRepository) GetHallAvailability(date string) (*models.HallAv
 
 	// Define all possible time slots (hourly from 08:00 to 23:00)
 	var slots []models.TimeSlot
+	parsedDate, _ := time.Parse("2006-01-02", date)
 	for hour := 8; hour <= 22; hour++ {
 		startTime := time.Time{}.Add(time.Duration(hour) * time.Hour).Format("15:04")
 		endTime := time.Time{}.Add(time.Duration(hour+1) * time.Hour).Format("15:04")
 
 		slot := models.TimeSlot{
-			StartTime: startTime,
-			EndTime:   endTime,
-			Available: true,
+			Date:         parsedDate,
+			StartTime:    startTime,
+			EndTime:      endTime,
+			Status:       "available",
+			MaxCapacity:  100,
+			CurrentUsage: 0,
+			Price:        r.calculateHourlyPrice(parsedDate, hour),
 		}
 
 		// Check if this slot conflicts with any booking
 		for _, booking := range bookings {
 			if booking.Status != "cancelled" && r.timeSlotConflicts(startTime, endTime, booking.StartTime, booking.EndTime) {
-				slot.Available = false
+				slot.Status = "booked"
+				slot.CurrentUsage = 50 // Example usage
 				break
 			}
 		}
@@ -365,4 +376,22 @@ func (r *hallBookingRepository) timeSlotConflicts(start1, end1, start2, end2 str
 	return (t1.Before(t4) && t2.After(t3)) || // Overlaps
 		(t1.Equal(t3) && t2.Equal(t4)) || // Same slot
 		(t1.Before(t3) && t2.After(t4)) // Contains
+}
+
+// calculateHourlyPrice calculates the price for a time slot based on date and hour
+func (r *hallBookingRepository) calculateHourlyPrice(date time.Time, hour int) float64 {
+	dayOfWeek := date.Weekday()
+
+	// Weekend pricing
+	if dayOfWeek == time.Saturday || dayOfWeek == time.Sunday {
+		return 25.0
+	}
+
+	// Peak hours (evening)
+	if hour >= 17 && hour <= 21 {
+		return 20.0
+	}
+
+	// Standard hours
+	return 15.0
 }

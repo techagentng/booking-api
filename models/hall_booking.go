@@ -7,7 +7,7 @@ import (
 // HallBooking represents a hall booking for events
 type HallBooking struct {
 	ID              uint      `gorm:"primaryKey" json:"id"`
-	BookingID       string    `json:"booking_id" gorm:"uniqueIndex;not null"`
+	BookingID       string    `json:"booking_id" gorm:"uniqueIndex;not null;type:varchar(50)"`
 	OrganizerName   string    `json:"organizer_name" gorm:"not null"`
 	OrganizerEmail  string    `json:"organizer_email" gorm:"not null"`
 	OrganizerPhone  string    `json:"organizer_phone" gorm:"not null"`
@@ -25,16 +25,27 @@ type HallBooking struct {
 	UpdatedAt       time.Time `json:"updated_at" gorm:"autoUpdateTime"`
 	DeletedAt       time.Time `json:"deleted_at" gorm:"index"`
 
-	// Relations
-	Payments []Payment `json:"payments,omitempty" gorm:"foreignKey:HallBookingID"`
-	Invoice  *Invoice  `json:"invoice,omitempty" gorm:"foreignKey:HallBookingID"`
+	// Admin tracking fields
+	ConfirmedBy *uint      `json:"confirmed_by"`
+	ConfirmedAt *time.Time `json:"confirmed_at"`
+	CancelledBy *uint      `json:"cancelled_by"`
+	CancelledAt *time.Time `json:"cancelled_at"`
+	UpdatedBy   *uint      `json:"updated_by"`
+
+	// Relations - temporarily disabled for migration
+	Payments []Payment `json:"payments,omitempty"`
+	Invoice  *Invoice  `json:"invoice,omitempty"`
+	// ConfirmedByUser *User                  `json:"confirmed_by_user,omitempty"`
+	// CancelledByUser *User                  `json:"cancelled_by_user,omitempty"`
+	// UpdatedByUser   *User                  `json:"updated_by_user,omitempty"`
+	// StatusHistory   []BookingStatusHistory `json:"status_history,omitempty"`
 }
 
 // Payment represents a payment for a hall booking
 type Payment struct {
 	ID            uint      `gorm:"primaryKey" json:"id"`
-	HallBookingID uint     `json:"hall_booking_id" gorm:"not null"`
-	PaymentType   string    `json:"payment_type" gorm:"not null"` // deposit, balance
+	HallBookingID uint      `json:"hall_booking_id" gorm:"not null"`
+	PaymentType   string    `json:"payment_type" gorm:"not null"`   // deposit, balance
 	PaymentMethod string    `json:"payment_method" gorm:"not null"` // cash, onsite, online
 	Amount        float64   `json:"amount" gorm:"not null"`
 	Status        string    `json:"status" gorm:"default:'pending'"` // pending, paid, overdue
@@ -49,9 +60,9 @@ type Payment struct {
 
 // Invoice represents an invoice for a hall booking
 type Invoice struct {
-	ID           uint      `gorm:"primaryKey" json:"id"`
-	HallBookingID uint     `json:"hall_booking_id" gorm:"uniqueIndex;not null"`
-	InvoiceNumber string   `json:"invoice_number" gorm:"uniqueIndex;not null"`
+	ID            uint      `gorm:"primaryKey" json:"id"`
+	HallBookingID uint      `json:"hall_booking_id" gorm:"uniqueIndex;not null"`
+	InvoiceNumber string    `json:"invoice_number" gorm:"uniqueIndex;not null"`
 	InvoiceDate   time.Time `json:"invoice_date" gorm:"not null"`
 	DueDate       time.Time `json:"due_date" gorm:"not null"`
 	TotalAmount   float64   `json:"total_amount" gorm:"not null"`
@@ -126,11 +137,52 @@ type HallBookingListResponse struct {
 	Meta PaginationMeta        `json:"meta"`
 }
 
-// TimeSlot represents an available time slot
-type TimeSlot struct {
-	StartTime string `json:"start_time"`
-	EndTime   string `json:"end_time"`
-	Available bool   `json:"available"`
+// BookingStatusHistory tracks status changes for hall bookings
+type BookingStatusHistory struct {
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	BookingID uint      `gorm:"not null" json:"booking_id"`
+	OldStatus *string   `json:"old_status"`
+	NewStatus string    `gorm:"not null" json:"new_status"`
+	ChangedBy uint      `gorm:"not null" json:"changed_by"`
+	ChangedAt time.Time `gorm:"not null" json:"changed_at"`
+	Notes     string    `json:"notes"`
+
+	// Relations - temporarily disabled for migration
+	// Booking       HallBooking `json:"booking,omitempty" gorm:"foreignKey:BookingID"`
+	// ChangedByUser User        `json:"changed_by_user,omitempty" gorm:"foreignKey:ChangedBy"`
+}
+
+// AdminBookingRequest represents a request to update booking status
+type AdminBookingRequest struct {
+	Status string `json:"status" binding:"required,oneof=pending confirmed completed cancelled"`
+	Notes  string `json:"notes" binding:"max=500"`
+}
+
+// AdminBookingResponse represents admin booking response with user info
+type AdminBookingResponse struct {
+	ID              uint                   `json:"id"`
+	BookingID       string                 `json:"booking_id"`
+	OrganizerName   string                 `json:"organizer_name"`
+	OrganizerEmail  string                 `json:"organizer_email"`
+	OrganizerPhone  string                 `json:"organizer_phone"`
+	EventType       string                 `json:"event_type"`
+	GuestCount      int                    `json:"guest_count"`
+	SpecialRequests string                 `json:"special_requests"`
+	BookingDate     string                 `json:"booking_date"`
+	StartTime       string                 `json:"start_time"`
+	EndTime         string                 `json:"end_time"`
+	TotalPrice      float64                `json:"total_price"`
+	DepositRequired float64                `json:"deposit_required"`
+	PaymentMethod   string                 `json:"payment_method"`
+	Status          string                 `json:"status"`
+	ConfirmedBy     *User                  `json:"confirmed_by,omitempty"`
+	ConfirmedAt     *time.Time             `json:"confirmed_at,omitempty"`
+	CancelledBy     *User                  `json:"cancelled_by,omitempty"`
+	CancelledAt     *time.Time             `json:"cancelled_at,omitempty"`
+	UpdatedBy       *User                  `json:"updated_by,omitempty"`
+	StatusHistory   []BookingStatusHistory `json:"status_history,omitempty"`
+	CreatedAt       time.Time              `json:"created_at"`
+	UpdatedAt       time.Time              `json:"updated_at"`
 }
 
 // HallAvailability represents hall availability for a specific date

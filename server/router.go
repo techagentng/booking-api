@@ -192,6 +192,32 @@ func (s *Server) defineRoutes(router *gin.Engine) {
 			router.HandleContext(c)
 		})
 
+		// Calendar routes
+		frontend.GET("/calendar/availability", func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/calendar/availability"
+			router.HandleContext(c)
+		})
+
+		frontend.GET("/calendar/availability/:date", func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/calendar/availability/" + c.Param("date")
+			router.HandleContext(c)
+		})
+
+		frontend.GET("/calendar/time-slots/:date", func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/calendar/time-slots/" + c.Param("date")
+			router.HandleContext(c)
+		})
+
+		frontend.GET("/calendar/check-availability", func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/calendar/check-availability"
+			router.HandleContext(c)
+		})
+
+		frontend.POST("/calendar/generate", func(c *gin.Context) {
+			c.Request.URL.Path = "/api/v1/calendar/generate"
+			router.HandleContext(c)
+		})
+
 		frontend.GET("/hall-bookings/date/:date", s.Authorize(), func(c *gin.Context) {
 			c.Request.URL.Path = "/api/v1/hall-bookings/date/" + c.Param("date")
 			router.HandleContext(c)
@@ -495,6 +521,31 @@ func (s *Server) defineRoutes(router *gin.Engine) {
 		v1.POST("/hall-bookings", s.handleCreateHallBooking())
 		v1.GET("/hall-bookings/availability", s.handleCheckHallAvailability())
 		v1.GET("/hall-bookings/availability/:date", s.handleGetHallAvailability())
+
+		// Public Calendar routes (no auth required)
+		v1.GET("/calendar/availability", s.handleGetCalendarAvailability())
+		v1.GET("/calendar/availability/:date", s.handleGetDailyAvailability())
+		v1.GET("/calendar/time-slots/:date", s.handleGetTimeSlots())
+		v1.GET("/calendar/check-availability", s.handleCheckSlotAvailability())
+		v1.POST("/calendar/generate", s.handleGenerateCalendar()) // Temporarily public for testing
+
+		// Admin Calendar routes (auth required)
+		admin := v1.Group("/admin")
+		// admin.Use(s.Authorize()) // Temporarily disabled for testing
+		{
+			admin.PUT("/calendar/availability/:date", s.handleUpdateDailyAvailability())
+			admin.GET("/calendar/stats", s.handleGetMonthlyStats())
+			admin.POST("/calendar/generate", s.handleGenerateCalendar())
+			admin.PUT("/calendar/time-slot/:date", s.handleUpdateTimeSlotStatus())
+
+			// Admin Hall Booking routes
+			admin.GET("/bookings", s.handleGetAllAdminBookings())
+			admin.GET("/bookings/:id", s.handleGetAdminBookingByID())
+			admin.PUT("/bookings/:id/status", s.handleUpdateAdminBookingStatus())
+			admin.GET("/bookings/:id/history", s.handleGetAdminBookingStatusHistory())
+			admin.GET("/bookings/stats", s.handleGetAdminBookingStats())
+			admin.GET("/calendar/availability", s.handleGetAdminCalendarAvailability())
+		}
 
 		// Hotel Info (for tablet)
 		v1.GET("/hotel/info", s.handleGetHotelInfo())

@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"hotel/models"
 	"hotel/server/response"
@@ -28,6 +29,13 @@ func (s *Server) handleCreateHallBooking() gin.HandlerFunc {
 			log.Printf("handleCreateHallBooking: error creating hall booking: %v", err)
 			response.JSON(c, "Failed to create hall booking", http.StatusBadRequest, nil, err)
 			return
+		}
+
+		// Update calendar availability after booking is created
+		bookingDate, _ := time.Parse("2006-01-02", req.BookingDate)
+		if err := s.CalendarRepository.UpdateAvailabilityFromBookings(bookingDate); err != nil {
+			log.Printf("handleCreateHallBooking: error updating calendar: %v", err)
+			// Don't fail the request, just log the error
 		}
 
 		response.JSON(c, "Hall booking created successfully", http.StatusCreated, result, nil)
@@ -182,8 +190,8 @@ func (s *Server) handleCheckHallAvailability() gin.HandlerFunc {
 		}
 
 		result := gin.H{
-			"available": available,
-			"date":      date,
+			"available":  available,
+			"date":       date,
 			"start_time": startTime,
 			"end_time":   endTime,
 		}

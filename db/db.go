@@ -139,9 +139,24 @@ func migrate(db *gorm.DB) error {
 		&models.HallBooking{},
 		&models.Payment{},
 		&models.Invoice{},
+		&models.CalendarAvailability{},
+		&models.TimeSlot{},
 	)
 	if err != nil {
 		return fmt.Errorf("failed to run auto migrations: %w", err)
+	}
+
+	// Add indexes for performance
+	if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_calendar_availability_date ON calendar_availability(date)").Error; err != nil {
+		return fmt.Errorf("failed to create calendar availability date index: %w", err)
+	}
+
+	if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_time_slots_date ON time_slots(date)").Error; err != nil {
+		return fmt.Errorf("failed to create time slots date index: %w", err)
+	}
+
+	if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_time_slots_date_time ON time_slots(date, start_time)").Error; err != nil {
+		return fmt.Errorf("failed to create time slots date time index: %w", err)
 	}
 
 	return nil

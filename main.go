@@ -48,6 +48,8 @@ func main() {
 	guestServiceRepo := db.NewGuestServiceRepository(gormDB.DB)
 	staffRepo := db.NewStaffRepository(gormDB.DB)
 	hallBookingRepo := db.NewHallBookingRepository(gormDB.DB)
+	adminHallBookingRepo := db.NewAdminHallBookingRepository(gormDB.DB)
+	calendarRepo := db.NewCalendarRepository(gormDB.DB)
 
 	// Services
 	authService := services.NewAuthService(authRepo, conf)
@@ -55,18 +57,20 @@ func main() {
 
 	// Server setup
 	s := &server.Server{
-		Config:                 conf,
-		AuthRepository:         authRepo,
-		AuthService:            authService,
-		GuestRepository:        guestRepo,
-		RoomRepository:         roomRepo,
-		ReservationRepository:  reservationRepo,
-		RoomServiceRepository:  roomServiceRepo,
-		GuestServiceRepository: guestServiceRepo,
-		StaffRepository:        staffRepo,
-		HallBookingRepository:  hallBookingRepo,
-		NotificationHub:        notificationHub,
-		DB:                     gormDB.DB,
+		Config:                     conf,
+		AuthRepository:             authRepo,
+		AuthService:                authService,
+		GuestRepository:            guestRepo,
+		RoomRepository:             roomRepo,
+		ReservationRepository:      reservationRepo,
+		RoomServiceRepository:      roomServiceRepo,
+		GuestServiceRepository:     guestServiceRepo,
+		StaffRepository:            staffRepo,
+		HallBookingRepository:      hallBookingRepo,
+		AdminHallBookingRepository: adminHallBookingRepo,
+		CalendarRepository:         calendarRepo,
+		NotificationHub:            notificationHub,
+		DB:                         gormDB.DB,
 	}
 
 	// Start server
