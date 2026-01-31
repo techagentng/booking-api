@@ -39,6 +39,10 @@ type Config struct {
 	FRONTEND_URL                 string `envconfig:"frontend_url"`
 	GOOGLE_CLOUD_PROJECT         string `envconfig:"google_cloud_project"`
 
+	// Stripe Configuration
+	StripeSecretKey     string `envconfig:"stripe_secret_key"`
+	StripeWebhookSecret string `envconfig:"stripe_webhook_secret"`
+
 	// OpenAI Configuration
 	OpenAIAPIKey string `envconfig:"openai_api_key"` // OpenAI API key for GPT-4o-mini
 }

@@ -305,5 +305,77 @@ func (r *adminHallBookingRepository) GetBookingStats(period, dateFrom, dateTo st
 
 	stats["popular_event_types"] = eventTypes
 
+	// NEW: Calculate average guests
+	var totalGuests int64
+	var bookingCount int64
+	avgGuestsQuery := r.db.Model(&models.HallBooking{})
+	if dateCondition != "1=1" {
+		avgGuestsQuery = avgGuestsQuery.Where(dateCondition, dateValue)
+	}
+	avgGuestsQuery.Select("COALESCE(SUM(guest_count), 0)").Scan(&totalGuests)
+	avgGuestsQuery.Count(&bookingCount)
+
+	var averageGuests *float64
+	if bookingCount > 0 {
+		avg := float64(totalGuests) / float64(bookingCount)
+		averageGuests = &avg
+	}
+	stats["average_guests"] = averageGuests
+
+	// NEW: Calculate occupancy rate (assuming 100 guests max per hall booking)
+	var totalBookedGuests int64
+	occupancyQuery := r.db.Model(&models.HallBooking{})
+	if dateCondition != "1=1" {
+		occupancyQuery = occupancyQuery.Where(dateCondition, dateValue)
+	}
+	occupancyQuery.Select("COALESCE(SUM(guest_count), 0)").Scan(&totalBookedGuests)
+
+	var occupancyRate *float64
+	if bookingCount > 0 {
+		totalCapacity := float64(bookingCount) * 100.0 // 100 guests max per booking
+		if totalCapacity > 0 {
+			occupancy := (float64(totalBookedGuests) / totalCapacity) * 100.0
+			occupancyRate = &occupancy
+		}
+	}
+	stats["occupancy_rate"] = occupancyRate
+
+	// NEW: Calculate monthly revenue data
+	var monthlyRevenue []struct {
+		Month   string  `json:"month"`
+		Revenue float64 `json:"revenue"`
+	}
+
+	revenueByMonthQuery := r.db.Model(&models.HallBooking{})
+	if dateCondition != "1=1" {
+		revenueByMonthQuery = revenueByMonthQuery.Where(dateCondition, dateValue)
+	}
+
+	revenueByMonthQuery.Select("DATE_TRUNC('month', booking_date)::text as month, COALESCE(SUM(total_price), 0) as revenue").
+		Where("status IN ?", []string{"confirmed", "completed"}).
+		Group("DATE_TRUNC('month', booking_date)").
+		Order("month ASC").
+		Scan(&monthlyRevenue)
+
+	stats["monthly_revenue"] = monthlyRevenue
+
+	// NEW: Calculate monthly booking volume data
+	var monthlyBookings []struct {
+		Month    string `json:"month"`
+		Bookings int    `json:"bookings"`
+	}
+
+	bookingsByMonthQuery := r.db.Model(&models.HallBooking{})
+	if dateCondition != "1=1" {
+		bookingsByMonthQuery = bookingsByMonthQuery.Where(dateCondition, dateValue)
+	}
+
+	bookingsByMonthQuery.Select("DATE_TRUNC('month', booking_date)::text as month, COUNT(*) as bookings").
+		Group("DATE_TRUNC('month', booking_date)").
+		Order("month ASC").
+		Scan(&monthlyBookings)
+
+	stats["monthly_bookings"] = monthlyBookings
+
 	return stats, nil
 }

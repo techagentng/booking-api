@@ -21,6 +21,10 @@ type HallBookingRepository interface {
 	GetHallAvailability(date string) (*models.HallAvailability, error)
 	GetHallBookingsByDate(date string) ([]models.HallBooking, error)
 	GetHallBookingsByDateRange(startDate, endDate string) ([]models.HallBooking, error)
+
+	// NEW: Activity feed methods
+	GetRecentBookings(limit int) ([]models.HallBooking, error)
+	GetTotalBookingsCount() (int64, error)
 }
 
 // hallBookingRepository implements HallBookingRepository
@@ -394,4 +398,26 @@ func (r *hallBookingRepository) calculateHourlyPrice(date time.Time, hour int) f
 
 	// Standard hours
 	return 15.0
+}
+
+// GetRecentBookings retrieves the most recent hall bookings
+func (r *hallBookingRepository) GetRecentBookings(limit int) ([]models.HallBooking, error) {
+	var bookings []models.HallBooking
+
+	err := r.db.Order("created_at DESC").
+		Limit(limit).
+		Find(&bookings).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return bookings, nil
+}
+
+// GetTotalBookingsCount retrieves the total count of hall bookings
+func (r *hallBookingRepository) GetTotalBookingsCount() (int64, error) {
+	var count int64
+	err := r.db.Model(&models.HallBooking{}).Count(&count).Error
+	return count, err
 }

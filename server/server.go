@@ -30,6 +30,7 @@ type Server struct {
 	HallBookingRepository      db.HallBookingRepository
 	AdminHallBookingRepository db.AdminHallBookingRepository
 	CalendarRepository         db.CalendarRepository
+	PaymentRepository          db.PaymentRepository
 	NotificationHub            *services.NotificationHub
 	DB                         *gorm.DB
 }

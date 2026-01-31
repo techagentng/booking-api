@@ -77,6 +77,13 @@ export interface BookingStats {
     event_type: string
     count: number
   }>
+  // Enhanced statistics
+  average_guests?: number  // Average number of guests per booking
+  occupancy_rate?: number // Occupancy rate as percentage
+  
+  // NEW: Chart data for frontend visualizations
+  monthly_revenue?: Array<{ month: string; revenue: number }>   // Revenue Overview chart data
+  monthly_bookings?: Array<{ month: string; bookings: number }>  // Booking Volume chart data
 }
 
 class AdminBookingService {
@@ -767,6 +774,27 @@ export function BookingStats({ stats }: BookingStatsProps) {
       label: 'Total Revenue',
       value: `$${stats.total_revenue.toLocaleString()}`,
       color: 'bg-purple-500'
+    },
+    // NEW: Enhanced statistics cards
+    {
+      label: 'Avg Guests',
+      value: stats.average_guests ? stats.average_guests.toFixed(1) : 'N/A',
+      color: 'bg-indigo-500'
+    },
+    {
+      label: 'Occupancy Rate',
+      value: stats.occupancy_rate ? `${stats.occupancy_rate.toFixed(1)}%` : 'N/A',
+      color: 'bg-orange-500'
+    },
+    {
+      label: 'Completed',
+      value: stats.completed_bookings,
+      color: 'bg-teal-500'
+    },
+    {
+      label: 'Cancelled',
+      value: stats.cancelled_bookings,
+      color: 'bg-red-500'
     }
   ]
 
@@ -785,6 +813,86 @@ export function BookingStats({ stats }: BookingStatsProps) {
           </div>
         </div>
       ))}
+    </div>
+  )
+}
+```
+
+### 6. Chart Components
+
+```typescript
+// components/admin/RevenueOverviewChart.tsx
+import React from 'react'
+import { BookingStats } from '@/services/adminBookingService'
+
+interface RevenueOverviewChartProps {
+  stats: BookingStats
+}
+
+export function RevenueOverviewChart({ stats }: RevenueOverviewChartProps) {
+  if (!stats.monthly_revenue || stats.monthly_revenue.length === 0) {
+    return (
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue Overview</h3>
+        <div className="flex items-center justify-center h-64 text-gray-500">
+          No revenue data available
+        </div>
+      </div>
+    )
+  }
+
+  const chartData = stats.monthly_revenue.map(item => ({
+    month: new Date(item.month).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+    revenue: item.revenue
+  }))
+
+  return (
+    <div className="bg-white rounded-lg shadow p-6">
+      <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue Overview</h3>
+      <div className="h-64">
+        {/* Your chart library implementation */}
+        <div className="text-sm text-gray-600">
+          Revenue data for {chartData.length} months
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// components/admin/BookingVolumeChart.tsx
+import React from 'react'
+import { BookingStats } from '@/services/adminBookingService'
+
+interface BookingVolumeChartProps {
+  stats: BookingStats
+}
+
+export function BookingVolumeChart({ stats }: BookingVolumeChartProps) {
+  if (!stats.monthly_bookings || stats.monthly_bookings.length === 0) {
+    return (
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Booking Volume</h3>
+        <div className="flex items-center justify-center h-64 text-gray-500">
+          No booking volume data available
+        </div>
+      </div>
+    )
+  }
+
+  const chartData = stats.monthly_bookings.map(item => ({
+    month: new Date(item.month).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+    bookings: item.bookings
+  }))
+
+  return (
+    <div className="bg-white rounded-lg shadow p-6">
+      <h3 className="text-lg font-semibold text-gray-900 mb-4">Booking Volume</h3>
+      <div className="h-64">
+        {/* Your chart library implementation */}
+        <div className="text-sm text-gray-600">
+          Booking data for {chartData.length} months
+        </div>
+      </div>
     </div>
   )
 }

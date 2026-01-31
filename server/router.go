@@ -519,6 +519,8 @@ func (s *Server) defineRoutes(router *gin.Engine) {
 
 		// Public Hall Booking routes (no auth required)
 		v1.POST("/hall-bookings", s.handleCreateHallBooking())
+		v1.POST("/bookings", s.handleCreateUnifiedBooking())                        // NEW: Unified booking endpoint
+		v1.GET("/bookings/recent-activity", s.handleGetHallBookingRecentActivity()) // NEW: Recent activity endpoint
 		v1.GET("/hall-bookings/availability", s.handleCheckHallAvailability())
 		v1.GET("/hall-bookings/availability/:date", s.handleGetHallAvailability())
 
@@ -528,6 +530,19 @@ func (s *Server) defineRoutes(router *gin.Engine) {
 		v1.GET("/calendar/time-slots/:date", s.handleGetTimeSlots())
 		v1.GET("/calendar/check-availability", s.handleCheckSlotAvailability())
 		v1.POST("/calendar/generate", s.handleGenerateCalendar()) // Temporarily public for testing
+
+		// NEW: Payment routes
+		v1.POST("/webhooks/stripe", s.handleStripeWebhook()) // Public webhook endpoint
+
+		// Protected Payment routes
+		payments := v1.Group("/payments")
+		payments.Use(s.Authorize())
+		{
+			payments.POST("/payment-intent", s.handleCreatePaymentIntent())
+			payments.GET("/:id", s.handleGetStripePaymentDetails())
+			payments.POST("/refund", s.handleRefundPayment())
+			payments.GET("/bookings/:booking_id/payments", s.handleGetBookingPayments())
+		}
 
 		// Admin Calendar routes (auth required)
 		admin := v1.Group("/admin")

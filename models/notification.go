@@ -18,6 +18,10 @@ const (
 	NotificationTypeRoomServiceOrder NotificationType = "room_service_order"
 	NotificationTypeCheckIn          NotificationType = "check_in"
 	NotificationTypeCheckOut         NotificationType = "check_out"
+	// NEW: Hall booking notification types
+	NotificationTypeNewHallBooking       NotificationType = "new_hall_booking"
+	NotificationTypeHallBookingUpdated   NotificationType = "hall_booking_updated"
+	NotificationTypeHallBookingCancelled NotificationType = "hall_booking_cancelled"
 )
 
 // NotificationPriority represents the priority level
@@ -152,4 +156,19 @@ type CheckOutData struct {
 	GuestName     string  `json:"guest_name"`
 	RoomNumber    string  `json:"room_number"`
 	TotalBill     float64 `json:"total_bill"`
+}
+
+// NEW: Hall booking notification data structures
+
+// HallBookingData contains data for hall booking notifications
+type HallBookingData struct {
+	BookingID     uint    `json:"booking_id"`
+	BookingIDStr  string  `json:"booking_id_str"`
+	OrganizerName string  `json:"organizer_name"`
+	EventType     string  `json:"event_type"`
+	BookingDate   string  `json:"booking_date"`
+	GuestCount    int     `json:"guest_count"`
+	TotalPrice    float64 `json:"total_price"`
+	Status        string  `json:"status,omitempty"`
+	CreatedByType string  `json:"created_by_type,omitempty"`
 }

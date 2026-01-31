@@ -20,6 +20,10 @@ type HallBookingService interface {
 	GetHallAvailability(date string) (*models.HallAvailability, error)
 	GetHallBookingsByDate(date string) ([]models.HallBookingResponse, error)
 	GetHallBookingsByDateRange(startDate, endDate string) ([]models.HallBookingResponse, error)
+
+	// NEW: Activity feed methods
+	GetRecentBookings(limit int) ([]models.HallBookingResponse, error)
+	GetTotalBookingsCount() (int64, error)
 }
 
 // hallBookingService implements HallBookingService
@@ -39,6 +43,10 @@ type HallBookingRepository interface {
 	GetHallAvailability(date string) (*models.HallAvailability, error)
 	GetHallBookingsByDate(date string) ([]models.HallBooking, error)
 	GetHallBookingsByDateRange(startDate, endDate string) ([]models.HallBooking, error)
+
+	// NEW: Activity feed methods
+	GetRecentBookings(limit int) ([]models.HallBooking, error)
+	GetTotalBookingsCount() (int64, error)
 }
 
 // NewHallBookingService creates a new hall booking service
@@ -74,6 +82,12 @@ func (s *hallBookingService) CreateHallBooking(req *models.CreateHallBookingRequ
 		DepositRequired: req.DepositRequired,
 		PaymentMethod:   req.PaymentMethod,
 		Status:          "pending",
+
+		// Creator tracking fields
+		CreatedBy:     req.CreatedBy,
+		CreatedByType: req.CreatedByType,
+		CreatorEmail:  req.CreatorEmail,
+		CreatorName:   req.CreatorName,
 	}
 
 	// Create booking
@@ -428,5 +442,30 @@ func (s *hallBookingService) convertToResponse(booking *models.HallBooking) *mod
 		UpdatedAt:       booking.UpdatedAt,
 		Payments:        booking.Payments,
 		Invoice:         booking.Invoice,
+
+		// Creator tracking fields
+		CreatedByType: booking.CreatedByType,
+		CreatorEmail:  booking.CreatorEmail,
+		CreatorName:   booking.CreatorName,
 	}
+}
+
+// GetRecentBookings retrieves the most recent hall bookings
+func (s *hallBookingService) GetRecentBookings(limit int) ([]models.HallBookingResponse, error) {
+	bookings, err := s.repo.GetRecentBookings(limit)
+	if err != nil {
+		return nil, err
+	}
+
+	var responses []models.HallBookingResponse
+	for _, booking := range bookings {
+		responses = append(responses, *s.convertToResponse(&booking))
+	}
+
+	return responses, nil
+}
+
+// GetTotalBookingsCount retrieves the total count of hall bookings
+func (s *hallBookingService) GetTotalBookingsCount() (int64, error) {
+	return s.repo.GetTotalBookingsCount()
 }

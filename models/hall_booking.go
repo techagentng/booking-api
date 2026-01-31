@@ -32,6 +32,12 @@ type HallBooking struct {
 	CancelledAt *time.Time `json:"cancelled_at"`
 	UpdatedBy   *uint      `json:"updated_by"`
 
+	// Creator tracking fields
+	CreatedBy     *uint  `json:"-"`                                       // User ID (if authenticated)
+	CreatedByType string `json:"created_by_type" gorm:"default:'public'"` // "user", "admin", or "public"
+	CreatorEmail  string `json:"creator_email"`                           // Email for public users
+	CreatorName   string `json:"creator_name"`                            // Name for public users
+
 	// Relations - temporarily disabled for migration
 	Payments []Payment `json:"payments,omitempty"`
 	Invoice  *Invoice  `json:"invoice,omitempty"`
@@ -89,6 +95,12 @@ type CreateHallBookingRequest struct {
 	TotalPrice      float64 `json:"total_price" binding:"required,min=0"`
 	DepositRequired float64 `json:"deposit_required" binding:"required,min=0"`
 	PaymentMethod   string  `json:"payment_method" binding:"required,oneof=cash onsite online"`
+
+	// Creator tracking fields (set by backend based on authentication)
+	CreatedBy     *uint  `json:"-"` // Set by backend
+	CreatedByType string `json:"-"` // Set by backend
+	CreatorEmail  string `json:"-"` // Set by backend
+	CreatorName   string `json:"-"` // Set by backend
 }
 
 // UpdateHallBookingRequest is the request payload for updating a hall booking
@@ -129,12 +141,23 @@ type HallBookingResponse struct {
 	UpdatedAt       time.Time `json:"updated_at"`
 	Payments        []Payment `json:"payments"`
 	Invoice         *Invoice  `json:"invoice"`
+
+	// Creator tracking fields
+	CreatedByType string `json:"created_by_type"`
+	CreatorEmail  string `json:"creator_email"`
+	CreatorName   string `json:"creator_name"`
 }
 
 // HallBookingListResponse is the paginated response for hall booking list
 type HallBookingListResponse struct {
 	Data []HallBookingResponse `json:"data"`
 	Meta PaginationMeta        `json:"meta"`
+}
+
+// HallBookingActivityResponse is the response for recent hall booking activity
+type HallBookingActivityResponse struct {
+	RecentBookings []HallBookingResponse `json:"recent_bookings"`
+	TotalCount     int64                 `json:"total_count"`
 }
 
 // BookingStatusHistory tracks status changes for hall bookings

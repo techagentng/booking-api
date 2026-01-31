@@ -50,10 +50,14 @@ func main() {
 	hallBookingRepo := db.NewHallBookingRepository(gormDB.DB)
 	adminHallBookingRepo := db.NewAdminHallBookingRepository(gormDB.DB)
 	calendarRepo := db.NewCalendarRepository(gormDB.DB)
+	paymentRepo := db.NewPaymentRepository(gormDB.DB)
 
 	// Services
 	authService := services.NewAuthService(authRepo, conf)
 	notificationHub := services.NewNotificationHub()
+
+	// Initialize Stripe
+	services.InitStripe(conf)
 
 	// Server setup
 	s := &server.Server{
@@ -69,6 +73,7 @@ func main() {
 		HallBookingRepository:      hallBookingRepo,
 		AdminHallBookingRepository: adminHallBookingRepo,
 		CalendarRepository:         calendarRepo,
+		PaymentRepository:          paymentRepo,
 		NotificationHub:            notificationHub,
 		DB:                         gormDB.DB,
 	}

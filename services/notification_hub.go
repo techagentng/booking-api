@@ -2,6 +2,7 @@ package services
 
 import (
 	"encoding/json"
+	"fmt"
 	"hotel/models"
 	"log"
 	"sync"
@@ -276,6 +277,65 @@ func (h *NotificationHub) NotifyCheckOut(reservationID uint, guestName, roomNumb
 			GuestName:     guestName,
 			RoomNumber:    roomNumber,
 			TotalBill:     totalBill,
+		},
+	)
+	h.Broadcast(notification)
+}
+
+// NEW: Hall booking notification methods
+
+// NotifyNewHallBooking sends a new hall booking notification
+func (h *NotificationHub) NotifyNewHallBooking(bookingID uint, bookingIDStr, organizerName, eventType, bookingDate string, guestCount int, totalPrice float64, createdByType string) {
+	notification := models.NewNotification(
+		models.NotificationTypeNewHallBooking,
+		"New Hall Booking",
+		fmt.Sprintf("%s booked a %s for %d guests on %s", organizerName, eventType, guestCount, bookingDate),
+		models.PriorityNormal,
+		models.HallBookingData{
+			BookingID:     bookingID,
+			BookingIDStr:  bookingIDStr,
+			OrganizerName: organizerName,
+			EventType:     eventType,
+			BookingDate:   bookingDate,
+			GuestCount:    guestCount,
+			TotalPrice:    totalPrice,
+			CreatedByType: createdByType,
+		},
+	)
+	h.Broadcast(notification)
+}
+
+// NotifyHallBookingUpdated sends a hall booking updated notification
+func (h *NotificationHub) NotifyHallBookingUpdated(bookingID uint, bookingIDStr, organizerName, eventType, newStatus string) {
+	notification := models.NewNotification(
+		models.NotificationTypeHallBookingUpdated,
+		"Hall Booking Updated",
+		fmt.Sprintf("%s's %s booking status changed to %s", organizerName, eventType, newStatus),
+		models.PriorityNormal,
+		models.HallBookingData{
+			BookingID:     bookingID,
+			BookingIDStr:  bookingIDStr,
+			OrganizerName: organizerName,
+			EventType:     eventType,
+			Status:        newStatus,
+		},
+	)
+	h.Broadcast(notification)
+}
+
+// NotifyHallBookingCancelled sends a hall booking cancelled notification
+func (h *NotificationHub) NotifyHallBookingCancelled(bookingID uint, bookingIDStr, organizerName, eventType, bookingDate string) {
+	notification := models.NewNotification(
+		models.NotificationTypeHallBookingCancelled,
+		"Hall Booking Cancelled",
+		fmt.Sprintf("%s's %s booking for %s has been cancelled", organizerName, eventType, bookingDate),
+		models.PriorityHigh,
+		models.HallBookingData{
+			BookingID:     bookingID,
+			BookingIDStr:  bookingIDStr,
+			OrganizerName: organizerName,
+			EventType:     eventType,
+			BookingDate:   bookingDate,
 		},
 	)
 	h.Broadcast(notification)

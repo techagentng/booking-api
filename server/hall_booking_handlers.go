@@ -4,11 +4,13 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"hotel/models"
 	"hotel/server/response"
 	"hotel/services"
+	"hotel/services/jwt"
 
 	"github.com/gin-gonic/gin"
 )
@@ -300,5 +302,269 @@ func (s *Server) handleUpdateHallBookingStatus() gin.HandlerFunc {
 		}
 
 		response.JSON(c, "Hall booking status updated successfully", http.StatusOK, result, nil)
+	}
+}
+
+// authenticateUser determines the user type and ID from the request
+func (s *Server) authenticateUser(c *gin.Context) (*uint, string) {
+	// Check for JWT token
+	authHeader := c.GetHeader("Authorization")
+	if authHeader == "" {
+		return nil, "public"
+	}
+
+	// Validate token format
+	if !strings.HasPrefix(authHeader, "Bearer ") {
+		return nil, "public"
+	}
+
+	// Extract and validate token
+	token := strings.TrimPrefix(authHeader, "Bearer ")
+	accessClaims, err := jwt.ValidateAndGetClaims(token, s.Config.JWTSecret)
+	if err != nil {
+		return nil, "public"
+	}
+
+	// Check if user is admin or regular user
+	isAdmin, ok := accessClaims["is_admin"].(bool)
+	if !ok {
+		return nil, "public"
+	}
+
+	userIDFloat, ok := accessClaims["id"].(float64)
+	if !ok {
+		return nil, "public"
+	}
+	userID := uint(userIDFloat)
+
+	if isAdmin {
+		return &userID, "admin"
+	}
+
+	return &userID, "user"
+}
+
+// handleCreateUnifiedBooking creates a new booking for both authenticated and public users
+func (s *Server) handleCreateUnifiedBooking() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Try to authenticate user
+		userID, userType := s.authenticateUser(c)
+
+		// Parse booking data (same for both user types)
+		var req models.CreateHallBookingRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			log.Printf("handleCreateUnifiedBooking: invalid request body: %v", err)
+			response.JSON(c, "Invalid request body", http.StatusBadRequest, nil, err)
+			return
+		}
+
+		// Set creator information based on user type
+		switch userType {
+		case "admin":
+			req.CreatedBy = userID
+			req.CreatedByType = "admin"
+			req.CreatorEmail = req.OrganizerEmail
+			req.CreatorName = req.OrganizerName
+		case "user":
+			req.CreatedBy = userID
+			req.CreatedByType = "user"
+			req.CreatorEmail = req.OrganizerEmail
+			req.CreatorName = req.OrganizerName
+		default: // public/non-authenticated
+			req.CreatedBy = nil
+			req.CreatedByType = "public"
+			req.CreatorEmail = req.OrganizerEmail
+			req.CreatorName = req.OrganizerName
+		}
+
+		// Create booking (same logic for all)
+		hallBookingService := services.NewHallBookingService(s.HallBookingRepository)
+		result, err := hallBookingService.CreateHallBooking(&req)
+		if err != nil {
+			log.Printf("handleCreateUnifiedBooking: error creating hall booking: %v", err)
+			response.JSON(c, "Failed to create hall booking", http.StatusBadRequest, nil, err)
+			return
+		}
+
+		// Send real-time notification for new hall booking
+		s.NotificationHub.NotifyNewHallBooking(
+			result.ID,
+			result.BookingID,
+			result.OrganizerName,
+			result.EventType,
+			result.BookingDate,
+			result.GuestCount,
+			result.TotalPrice,
+			result.CreatedByType,
+		)
+
+		response.JSON(c, "Hall booking created successfully", http.StatusCreated, result, nil)
+	}
+}
+
+// handleGetHallBookingRecentActivity retrieves recent hall booking activity for dashboard
+func (s *Server) handleGetHallBookingRecentActivity() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Get limit from query param (default to 10)
+		limitStr := c.DefaultQuery("limit", "10")
+		limit, err := strconv.Atoi(limitStr)
+		if err != nil || limit <= 0 {
+			limit = 10
+		}
+		if limit > 50 { // Cap at 50 to prevent excessive data
+			limit = 50
+		}
+
+		hallBookingService := services.NewHallBookingService(s.HallBookingRepository)
+
+		// Get recent bookings
+		recentBookings, err := hallBookingService.GetRecentBookings(limit)
+		if err != nil {
+			log.Printf("handleGetHallBookingRecentActivity: error getting recent bookings: %v", err)
+			response.JSON(c, "Failed to fetch recent activity", http.StatusInternalServerError, nil, err)
+			return
+		}
+
+		// Get total count
+		totalCount, err := hallBookingService.GetTotalBookingsCount()
+		if err != nil {
+			log.Printf("handleGetHallBookingRecentActivity: error getting total count: %v", err)
+			response.JSON(c, "Failed to get total count", http.StatusInternalServerError, nil, err)
+			return
+		}
+
+		activityResponse := models.HallBookingActivityResponse{
+			RecentBookings: recentBookings,
+			TotalCount:     totalCount,
+		}
+
+		response.JSON(c, "Recent activity retrieved successfully", http.StatusOK, activityResponse, nil)
+	}
+}
+
+// Payment handler methods
+
+// handleCreatePaymentIntent creates a payment intent for a booking
+func (s *Server) handleCreatePaymentIntent() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req models.PaymentRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format", "details": err.Error()})
+			return
+		}
+
+		// Get booking details
+		booking, err := s.HallBookingRepository.GetHallBookingByID(req.BookingID)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Booking not found", "details": err.Error()})
+			return
+		}
+
+		// Create payment service
+		paymentService := services.NewPaymentService(s.PaymentRepository, s.HallBookingRepository, s.Config)
+
+		// Create payment intent
+		intent, err := paymentService.CreatePaymentIntent(booking)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create payment intent", "details": err.Error()})
+			return
+		}
+
+		response := models.PaymentIntentResponse{
+			ClientSecret: intent.ClientSecret,
+			PaymentID:    intent.ID,
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"message": "Payment intent created successfully",
+			"data":    response,
+		})
+	}
+}
+
+// handleGetStripePaymentDetails retrieves Stripe payment details
+func (s *Server) handleGetStripePaymentDetails() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		paymentID := c.Param("id")
+
+		paymentService := services.NewPaymentService(s.PaymentRepository, s.HallBookingRepository, s.Config)
+		payment, err := paymentService.GetStripePaymentDetails(paymentID)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Payment not found", "details": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"message": "Payment details retrieved successfully",
+			"data":    payment,
+		})
+	}
+}
+
+// handleStripeWebhook processes Stripe webhook events
+func (s *Server) handleStripeWebhook() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		body, err := c.GetRawData()
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body", "details": err.Error()})
+			return
+		}
+
+		signature := c.GetHeader("Stripe-Signature")
+
+		paymentService := services.NewPaymentService(s.PaymentRepository, s.HallBookingRepository, s.Config)
+		if err := paymentService.ProcessWebhookEvent(body, signature); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Webhook processing failed", "details": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"status": "received"})
+	}
+}
+
+// handleRefundPayment processes a refund
+func (s *Server) handleRefundPayment() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req models.RefundRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format", "details": err.Error()})
+			return
+		}
+
+		paymentService := services.NewPaymentService(s.PaymentRepository, s.HallBookingRepository, s.Config)
+		refund, err := paymentService.RefundPayment(req.PaymentID, req.Amount)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process refund", "details": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"message": "Refund processed successfully",
+			"data":    refund,
+		})
+	}
+}
+
+// handleGetBookingPayments retrieves payments for a booking
+func (s *Server) handleGetBookingPayments() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		bookingIDStr := c.Param("booking_id")
+		bookingID, err := strconv.ParseUint(bookingIDStr, 10, 32)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid booking ID", "details": err.Error()})
+			return
+		}
+
+		paymentService := services.NewPaymentService(s.PaymentRepository, s.HallBookingRepository, s.Config)
+		payments, err := paymentService.GetStripePaymentsByBookingID(uint(bookingID))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get payments", "details": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"message": "Payments retrieved successfully",
+			"data":    payments,
+		})
 	}
 }
