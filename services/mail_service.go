@@ -24,8 +24,8 @@ type Mailer interface {
 
 // NewMailgunService creates a new Mailgun service instance
 func NewMailgunService() *MailgunService {
-	domain := os.Getenv("CITIZENX_MG_DOMAIN")
-	apiKey := os.Getenv("CITIZENX_MG_API_KEY")
+	domain := os.Getenv("MG_DOMAIN")
+	apiKey := os.Getenv("MG_API_KEY")
 
 	if domain == "" || apiKey == "" {
 		log.Printf("Mailgun credentials not found in environment variables")
@@ -43,9 +43,9 @@ func (m *MailgunService) SendBookingConfirmation(bookingEmail, organizerName, bo
 		return "", fmt.Errorf("mail service not initialized")
 	}
 
-	emailFrom := os.Getenv("CITIZENX_MG_EMAIL_FROM")
+	emailFrom := os.Getenv("MG_EMAIL_FROM")
 	if emailFrom == "" {
-		emailFrom = "noreply@" + os.Getenv("CITIZENX_MG_DOMAIN")
+		emailFrom = "noreply@" + os.Getenv("MG_DOMAIN")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
@@ -114,9 +114,9 @@ func (m *MailgunService) SendBookingStatusUpdate(bookingEmail, organizerName, bo
 		return "", fmt.Errorf("mail service not initialized")
 	}
 
-	emailFrom := os.Getenv("CITIZENX_MG_EMAIL_FROM")
+	emailFrom := os.Getenv("MG_EMAIL_FROM")
 	if emailFrom == "" {
-		emailFrom = "noreply@" + os.Getenv("CITIZENX_MG_DOMAIN")
+		emailFrom = "noreply@" + os.Getenv("MG_DOMAIN")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
@@ -184,9 +184,9 @@ func (m *MailgunService) SendBookingCancellation(bookingEmail, organizerName, bo
 		return "", fmt.Errorf("mail service not initialized")
 	}
 
-	emailFrom := os.Getenv("CITIZENX_MG_EMAIL_FROM")
+	emailFrom := os.Getenv("MG_EMAIL_FROM")
 	if emailFrom == "" {
-		emailFrom = "noreply@" + os.Getenv("CITIZENX_MG_DOMAIN")
+		emailFrom = "noreply@" + os.Getenv("MG_DOMAIN")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
