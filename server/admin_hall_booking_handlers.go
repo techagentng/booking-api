@@ -115,6 +115,52 @@ func (s *Server) handleUpdateAdminBookingStatus() gin.HandlerFunc {
 			return
 		}
 
+		// Send real-time notification for status update
+		if req.Status == "cancelled" {
+			s.NotificationHub.NotifyHallBookingCancelled(
+				booking.ID,
+				booking.BookingID,
+				booking.OrganizerName,
+				booking.EventType,
+				booking.BookingDate.Format("2006-01-02"),
+			)
+		} else {
+			s.NotificationHub.NotifyHallBookingUpdated(
+				booking.ID,
+				booking.BookingID,
+				booking.OrganizerName,
+				booking.EventType,
+				req.Status,
+			)
+		}
+
+		// Send email notification
+		if s.MailService != nil && booking.OrganizerEmail != "" {
+			go func() {
+				var err error
+				if req.Status == "cancelled" {
+					_, err = s.MailService.SendBookingCancellation(
+						booking.OrganizerEmail,
+						booking.OrganizerName,
+						booking.BookingID,
+						booking.EventType,
+						booking.BookingDate.Format("2006-01-02"),
+					)
+				} else {
+					_, err = s.MailService.SendBookingStatusUpdate(
+						booking.OrganizerEmail,
+						booking.OrganizerName,
+						booking.BookingID,
+						booking.EventType,
+						req.Status,
+					)
+				}
+				if err != nil {
+					log.Printf("Failed to send booking status update email: %v", err)
+				}
+			}()
+		}
+
 		response.JSON(c, "Booking status updated successfully", http.StatusOK, adminService.ConvertToAdminResponse(booking), nil)
 	}
 }

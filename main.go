@@ -55,6 +55,7 @@ func main() {
 	// Services
 	authService := services.NewAuthService(authRepo, conf)
 	notificationHub := services.NewNotificationHub()
+	mailService := services.NewMailgunService()
 
 	// Initialize Stripe
 	services.InitStripe(conf)
@@ -75,6 +76,7 @@ func main() {
 		CalendarRepository:         calendarRepo,
 		PaymentRepository:          paymentRepo,
 		NotificationHub:            notificationHub,
+		MailService:                mailService,
 		DB:                         gormDB.DB,
 	}
 

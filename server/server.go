@@ -32,6 +32,7 @@ type Server struct {
 	CalendarRepository         db.CalendarRepository
 	PaymentRepository          db.PaymentRepository
 	NotificationHub            *services.NotificationHub
+	MailService                *services.MailgunService
 	DB                         *gorm.DB
 }
 

@@ -301,6 +301,52 @@ func (s *Server) handleUpdateHallBookingStatus() gin.HandlerFunc {
 			return
 		}
 
+		// Send real-time notification for status update
+		if req.Status == "cancelled" {
+			s.NotificationHub.NotifyHallBookingCancelled(
+				result.ID,
+				result.BookingID,
+				result.OrganizerName,
+				result.EventType,
+				result.BookingDate,
+			)
+		} else {
+			s.NotificationHub.NotifyHallBookingUpdated(
+				result.ID,
+				result.BookingID,
+				result.OrganizerName,
+				result.EventType,
+				req.Status,
+			)
+		}
+
+		// Send email notification
+		if s.MailService != nil && result.OrganizerEmail != "" {
+			go func() {
+				var err error
+				if req.Status == "cancelled" {
+					_, err = s.MailService.SendBookingCancellation(
+						result.OrganizerEmail,
+						result.OrganizerName,
+						result.BookingID,
+						result.EventType,
+						result.BookingDate,
+					)
+				} else {
+					_, err = s.MailService.SendBookingStatusUpdate(
+						result.OrganizerEmail,
+						result.OrganizerName,
+						result.BookingID,
+						result.EventType,
+						req.Status,
+					)
+				}
+				if err != nil {
+					log.Printf("Failed to send booking status update email: %v", err)
+				}
+			}()
+		}
+
 		response.JSON(c, "Hall booking status updated successfully", http.StatusOK, result, nil)
 	}
 }
@@ -397,6 +443,24 @@ func (s *Server) handleCreateUnifiedBooking() gin.HandlerFunc {
 			result.TotalPrice,
 			result.CreatedByType,
 		)
+
+		// Send email confirmation
+		if s.MailService != nil && result.OrganizerEmail != "" {
+			go func() {
+				_, err := s.MailService.SendBookingConfirmation(
+					result.OrganizerEmail,
+					result.OrganizerName,
+					result.BookingID,
+					result.EventType,
+					result.BookingDate,
+					result.GuestCount,
+					result.TotalPrice,
+				)
+				if err != nil {
+					log.Printf("Failed to send booking confirmation email: %v", err)
+				}
+			}()
+		}
 
 		response.JSON(c, "Hall booking created successfully", http.StatusCreated, result, nil)
 	}

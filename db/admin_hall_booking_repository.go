@@ -260,10 +260,31 @@ func (r *adminHallBookingRepository) GetBookingStats(period, dateFrom, dateTo st
 
 	// Status counts
 	var pendingCount, confirmedCount, completedCount, cancelledCount int64
-	baseQuery.Where("status = ?", "pending").Count(&pendingCount)
-	baseQuery.Where("status = ?", "confirmed").Count(&confirmedCount)
-	baseQuery.Where("status = ?", "completed").Count(&completedCount)
-	baseQuery.Where("status = ?", "cancelled").Count(&cancelledCount)
+
+	// Create fresh queries for each status to avoid WHERE clause accumulation
+	pendingQuery := r.db.Model(&models.HallBooking{})
+	if dateCondition != "1=1" {
+		pendingQuery = pendingQuery.Where(dateCondition, dateValue)
+	}
+	pendingQuery.Where("status = ?", "pending").Count(&pendingCount)
+
+	confirmedQuery := r.db.Model(&models.HallBooking{})
+	if dateCondition != "1=1" {
+		confirmedQuery = confirmedQuery.Where(dateCondition, dateValue)
+	}
+	confirmedQuery.Where("status = ?", "confirmed").Count(&confirmedCount)
+
+	completedQuery := r.db.Model(&models.HallBooking{})
+	if dateCondition != "1=1" {
+		completedQuery = completedQuery.Where(dateCondition, dateValue)
+	}
+	completedQuery.Where("status = ?", "completed").Count(&completedCount)
+
+	cancelledQuery := r.db.Model(&models.HallBooking{})
+	if dateCondition != "1=1" {
+		cancelledQuery = cancelledQuery.Where(dateCondition, dateValue)
+	}
+	cancelledQuery.Where("status = ?", "cancelled").Count(&cancelledCount)
 
 	stats["pending_bookings"] = pendingCount
 	stats["confirmed_bookings"] = confirmedCount
