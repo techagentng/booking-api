@@ -565,6 +565,46 @@ func (s *Server) defineRoutes(router *gin.Engine) {
 		// Hotel Info (for tablet)
 		v1.GET("/hotel/info", s.handleGetHotelInfo())
 
+		// TripsBook Public API Routes (no authentication required)
+		public := v1.Group("/public")
+		{
+			// Categories
+			public.GET("/categories", s.handleGetCategories())
+
+			// Services by category
+			public.GET("/services/category/:category", s.handleGetServicesByCategory())
+
+			// Explore endpoints
+			public.GET("/explore/featured", s.handleGetExploreFeatured())
+			public.GET("/explore/destinations", s.handleGetExploreDestinations())
+
+			// Nearby services
+			public.GET("/services/nearby", s.handleGetNearbyServices())
+			public.GET("/services/nearby/filters", s.handleGetDistanceFilters())
+
+			// Trending
+			public.GET("/services/trending", s.handleGetTrendingServices())
+			public.GET("/categories/trending", s.handleGetTrendingCategories())
+
+			// Search
+			public.GET("/search", s.handleSearchServices())
+			public.GET("/search/suggestions", s.handleGetSearchSuggestions())
+
+			// Location services
+			public.GET("/location/current", s.handleGetCurrentLocation())
+			public.POST("/location/update", s.handleUpdateLocation())
+			public.GET("/locations/popular", s.handleGetPopularLocations())
+
+			// Service details
+			public.GET("/services/:id", s.handleGetServiceDetails())
+
+			// Map view
+			public.GET("/services/map", s.handleGetMapViewServices())
+
+			// Analytics tracking
+			public.POST("/analytics/track", s.handleTrackAnalytics())
+		}
+
 		// Tablet/Guest-facing routes
 		tablet := v1.Group("/tablet")
 		tablet.Use(s.Authorize())

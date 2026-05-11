@@ -80,6 +80,9 @@ func main() {
 		DB:                         gormDB.DB,
 	}
 
+	// Initialize TripsBook handlers
+	s.InitTripsBookHandlers()
+
 	// Start server
 	s.Start()
 }

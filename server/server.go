@@ -34,6 +34,7 @@ type Server struct {
 	NotificationHub            *services.NotificationHub
 	MailService                *services.MailgunService
 	DB                         *gorm.DB
+	tripsbookHandlers          *TripsBookHandlers
 }
 
 // Server serves requests to DB with rout
