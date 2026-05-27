@@ -6,8 +6,11 @@ import (
 
 // Role constants
 const (
-	RoleAdmin = "Admin"
-	RoleUser  = "User"
+	RoleAdmin     = "Admin"
+	RoleProvider  = "Provider"
+	RoleCustomer  = "Customer"
+	RoleModerator = "Moderator"
+	RoleUser      = "User" // Keep for backward compatibility
 )
 
 // Role represents a user role in the system

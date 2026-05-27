@@ -1,6 +1,8 @@
 package models
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -18,6 +20,11 @@ type User struct {
 	AdminStatus    bool      `json:"is_admin" gorm:"default:false"`
 	RoleID         uuid.UUID `gorm:"type:uuid;not null" json:"role_id"`
 	Role           Role      `gorm:"foreignKey:RoleID" json:"role"`
+
+	// Provider Onboarding Fields
+	EmailVerified          bool       `gorm:"default:false" json:"email_verified"`
+	EmailVerificationToken string     `json:"-"`
+	EmailVerifiedAt        *time.Time `json:"email_verified_at"`
 }
 
 // VerifyPassword checks if the provided password matches the hashed password

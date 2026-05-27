@@ -13,14 +13,15 @@ type Reservation struct {
 	ConfirmationNumber string     `json:"confirmation_number" gorm:"uniqueIndex;not null"`
 	GuestID            uint       `json:"guest_id" gorm:"not null;index"`
 	RoomID             uint       `json:"room_id" gorm:"not null;index"`
+	CustomerID         string     `json:"customer_id" gorm:"type:uuid;index"` 
 	CheckInDate        time.Time  `json:"check_in_date" gorm:"index"`
 	CheckOutDate       time.Time  `json:"check_out_date" gorm:"index"`
 	NumberOfGuests     int        `json:"number_of_guests" gorm:"default:1"`
 	NumberOfNights     int        `json:"number_of_nights"`
 	PricePerNight      float64    `json:"price_per_night"`
 	TotalAmount        float64    `json:"total_amount"`
-	Status             string     `json:"status" gorm:"default:pending;index"`   // pending, confirmed, checked-in, checked-out, cancelled
-	PaymentStatus      string     `json:"payment_status" gorm:"default:pending"` // pending, paid, partially_paid, refunded
+	Status             string     `json:"status" gorm:"default:pending;index"`   
+	PaymentStatus      string     `json:"payment_status" gorm:"default:pending"` 
 	PaymentMethod      string     `json:"payment_method"`
 	SpecialRequests    string     `json:"special_requests"`
 	CheckedInAt        *time.Time `json:"checked_in_at"`

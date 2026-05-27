@@ -52,7 +52,13 @@ func getPostgresDB(c *config.Config) *gorm.DB {
 }
 
 func SeedRoles(db *gorm.DB) error {
-	roles := []string{models.RoleAdmin, models.RoleUser}
+	roles := []string{
+		models.RoleAdmin,
+		models.RoleProvider,
+		models.RoleCustomer,
+		models.RoleModerator,
+		models.RoleUser,
+	}
 
 	for _, roleName := range roles {
 		var existingRole models.Role

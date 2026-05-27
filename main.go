@@ -51,6 +51,10 @@ func main() {
 	adminHallBookingRepo := db.NewAdminHallBookingRepository(gormDB.DB)
 	calendarRepo := db.NewCalendarRepository(gormDB.DB)
 	paymentRepo := db.NewPaymentRepository(gormDB.DB)
+	providerRepo := db.NewProviderRepository(gormDB.DB)
+	customerRepo := db.NewCustomerRepository(gormDB.DB)
+	bookingRepo := db.NewBookingRepository(gormDB.DB)
+	reviewRepo := db.NewReviewRepository(gormDB.DB)
 
 	// Services
 	authService := services.NewAuthService(authRepo, conf)
@@ -75,6 +79,10 @@ func main() {
 		AdminHallBookingRepository: adminHallBookingRepo,
 		CalendarRepository:         calendarRepo,
 		PaymentRepository:          paymentRepo,
+		ProviderRepository:         providerRepo,
+		CustomerRepository:         customerRepo,
+		BookingRepository:          bookingRepo,
+		ReviewRepository:           reviewRepo,
 		NotificationHub:            notificationHub,
 		MailService:                mailService,
 		DB:                         gormDB.DB,

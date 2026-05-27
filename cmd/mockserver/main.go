@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"os"
 
 	"hotel/tripsbook/handlers"
 
@@ -51,6 +50,12 @@ func main() {
 		public.GET("/services/trending", mockHandler.GetTrendingServices)
 		public.GET("/categories/trending", mockHandler.GetTrendingCategories)
 
+		// Service Providers
+		public.GET("/providers", mockHandler.GetAllProviders)
+		public.GET("/providers/category/:category", mockHandler.GetProvidersByCategory)
+		public.GET("/providers/category/:category/featured", mockHandler.GetFeaturedProviders)
+		public.GET("/providers/:id", mockHandler.GetProviderByID)
+
 		// Search
 		public.GET("/search", mockHandler.SearchServices)
 		public.GET("/search/suggestions", mockHandler.GetSearchSuggestions)
@@ -79,7 +84,7 @@ func main() {
 	})
 
 	// Start server
-	log.Println("🚀 TripsBook Mock API Server starting on http://localhost:8080")
+	log.Println("🚀 TripsBook Mock API Server starting on http://localhost:8081")
 	log.Println("📱 Available endpoints:")
 	log.Println("   GET /api/v1/public/categories")
 	log.Println("   GET /api/v1/public/services/trending")
@@ -88,16 +93,9 @@ func main() {
 	log.Println("   GET /api/v1/public/services/nearby")
 	log.Println("   GET /api/v1/public/search")
 	log.Println("   And more...")
-	log.Println("🔗 Frontend can now connect to localhost:8080")
+	log.Println("🔗 Frontend can now connect to localhost:8081")
 
-	if err := r.Run(":8080"); err != nil {
+	if err := r.Run(":8081"); err != nil {
 		log.Fatal("Failed to start server:", err)
-	}
-}
-
-// Check if mock server should be started
-func init() {
-	if os.Getenv("MOCK_SERVER") == "true" {
-		go startMockServer()
 	}
 }

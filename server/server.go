@@ -31,6 +31,10 @@ type Server struct {
 	AdminHallBookingRepository db.AdminHallBookingRepository
 	CalendarRepository         db.CalendarRepository
 	PaymentRepository          db.PaymentRepository
+	ProviderRepository         *db.ProviderRepository
+	CustomerRepository         *db.CustomerRepository
+	BookingRepository          *db.BookingRepository
+	ReviewRepository           *db.ReviewRepository
 	NotificationHub            *services.NotificationHub
 	MailService                *services.MailgunService
 	DB                         *gorm.DB

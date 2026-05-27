@@ -361,11 +361,81 @@ func (s *Server) defineRoutes(router *gin.Engine) {
 		v1.POST("/auth/login", s.handleLogin())
 		v1.POST("/google/user/login", s.handleGoogleLogin())
 
+		// Provider onboarding public routes
+		v1.POST("/public/onboarding/register", s.RegisterProvider)
+		v1.POST("/public/onboarding/verify-email", s.VerifyEmail)
+
 		// Protected routes (authentication required)
 		authorized := v1.Group("/auth")
 		authorized.Use(s.Authorize())
 		{
 			authorized.POST("/logout", s.handleLogout())
+		}
+
+		// Provider onboarding authenticated routes
+		provider := v1.Group("/provider/onboarding")
+		provider.Use(s.Authorize())
+		{
+			provider.GET("/status", s.GetOnboardingStatus)
+			provider.PUT("/business-info", s.UpdateBusinessInfo)
+			provider.POST("/services", s.CreateProviderServices)
+			provider.GET("/verification", s.GetVerificationStatus)
+			provider.POST("/training/:module_id", s.CompleteTraining)
+			provider.POST("/activate", s.ActivateProvider)
+		}
+
+		// Provider service management authenticated routes
+		providerServices := v1.Group("/provider/services")
+		providerServices.Use(s.Authorize())
+		{
+			providerServices.GET("", s.GetProviderServices)
+			providerServices.POST("", s.CreateProviderService)
+			providerServices.PUT("/:id", s.UpdateProviderService)
+			providerServices.DELETE("/:id", s.DeleteProviderService)
+			providerServices.PATCH("/:id/availability", s.ToggleServiceAvailability)
+		}
+
+		// Customer authenticated routes
+		customer := v1.Group("/customer")
+		customer.Use(s.Authorize())
+		{
+			customer.GET("/me", s.GetCustomerProfile)
+			customer.PATCH("/me", s.UpdateCustomerProfile)
+			customer.GET("/saved", s.GetSavedServices)
+			customer.POST("/saved", s.SaveService)
+			customer.DELETE("/saved/:id", s.RemoveSavedService)
+			customer.GET("/bookings", s.GetCustomerBookings)
+			customer.POST("/bookings/service", s.CreateServiceBooking)
+			customer.GET("/bookings/service", s.GetCustomerServiceBookings)
+			customer.PUT("/bookings/service/:id/cancel", s.CancelServiceBooking)
+			customer.GET("/preferences", s.GetCustomerPreferences)
+			customer.PATCH("/preferences", s.UpdateCustomerPreferences)
+		}
+
+		// Provider booking management authenticated routes
+		providerBookings := v1.Group("/provider/bookings")
+		providerBookings.Use(s.Authorize())
+		{
+			providerBookings.GET("", s.GetProviderServiceBookings)
+			providerBookings.PUT("/:id/accept", s.AcceptServiceBooking)
+			providerBookings.PUT("/:id/reject", s.RejectServiceBooking)
+			providerBookings.PUT("/:id/complete", s.CompleteServiceBooking)
+		}
+
+		// Public review routes (no authentication required for viewing)
+		v1.GET("/public/services/:id/reviews", s.GetServiceReviews)
+		v1.GET("/public/services/:id/reviews/stats", s.GetServiceRatingStats)
+		v1.GET("/public/providers/:id/reviews", s.GetProviderReviews)
+		v1.GET("/public/providers/:id/reviews/stats", s.GetProviderRatingStats)
+
+		// Customer review routes (authentication required)
+		customerReviews := v1.Group("/customer")
+		customerReviews.Use(s.Authorize())
+		{
+			customerReviews.POST("/services/:id/reviews", s.CreateServiceReview)
+			customerReviews.POST("/providers/:id/reviews", s.CreateProviderReview)
+			customerReviews.PUT("/reviews/:id", s.UpdateReview)
+			customerReviews.DELETE("/reviews/:id", s.DeleteReview)
 		}
 
 		// Notification routes (SSE)

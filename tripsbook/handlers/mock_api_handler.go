@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	"hotel/tripsbook/models"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -724,4 +726,360 @@ func (h *MockAPIHandler) GetServicesByCategory(c *gin.Context) {
 		},
 	}
 	c.JSON(http.StatusOK, response)
+}
+
+// GetAllProviders returns all service providers from all categories
+func (h *MockAPIHandler) GetAllProviders(c *gin.Context) {
+	allProviders := []models.ServiceProvider{}
+
+	// Add all providers from all categories
+	allProviders = append(allProviders, getMockServiceProvidersByCategory("cat_hotels")...)
+	allProviders = append(allProviders, getMockServiceProvidersByCategory("cat_restaurants")...)
+	allProviders = append(allProviders, getMockServiceProvidersByCategory("cat_transport")...)
+
+	// Sort by admin position
+	sortedProviders := make([]models.ServiceProvider, len(allProviders))
+	copy(sortedProviders, allProviders)
+
+	for i := 0; i < len(sortedProviders)-1; i++ {
+		for j := i + 1; j < len(sortedProviders); j++ {
+			if sortedProviders[i].AdminPosition > sortedProviders[j].AdminPosition {
+				sortedProviders[i], sortedProviders[j] = sortedProviders[j], sortedProviders[i]
+			}
+		}
+	}
+
+	response := APIResponse{
+		Success: true,
+		Data: map[string]interface{}{
+			"providers": sortedProviders,
+			"total":     len(sortedProviders),
+			"featured":  countFeaturedProviders(sortedProviders),
+		},
+		Message: "All providers retrieved successfully",
+		Meta: APIMeta{
+			Timestamp: "2024-01-15T10:30:00Z",
+		},
+	}
+	c.JSON(http.StatusOK, response)
+}
+
+// GetProvidersByCategory returns service providers for a specific category
+func (h *MockAPIHandler) GetProvidersByCategory(c *gin.Context) {
+	categoryID := c.Param("category")
+	page := c.DefaultQuery("page", "1")
+	limit := c.DefaultQuery("limit", "20")
+
+	// Convert page and limit to int (simplified)
+	_ = page
+	_ = limit
+
+	// Get providers for the category
+	providers := getMockServiceProvidersByCategory(categoryID)
+
+	// Sort by admin position
+	sortedProviders := make([]models.ServiceProvider, len(providers))
+	copy(sortedProviders, providers)
+
+	// Simple sort by admin position
+	for i := 0; i < len(sortedProviders)-1; i++ {
+		for j := i + 1; j < len(sortedProviders); j++ {
+			if sortedProviders[i].AdminPosition > sortedProviders[j].AdminPosition {
+				sortedProviders[i], sortedProviders[j] = sortedProviders[j], sortedProviders[i]
+			}
+		}
+	}
+
+	response := APIResponse{
+		Success: true,
+		Data: models.ProviderListResponse{
+			Providers:     sortedProviders,
+			Total:         len(sortedProviders),
+			Page:          1,
+			Limit:         20,
+			HasNext:       false,
+			HasPrev:       false,
+			Category:      categoryID,
+			FeaturedCount: countFeaturedProviders(sortedProviders),
+		},
+		Message: "Providers retrieved successfully",
+		Meta: APIMeta{
+			Timestamp: "2024-01-15T10:30:00Z",
+		},
+	}
+	c.JSON(http.StatusOK, response)
+}
+
+// GetProviderByID returns a specific provider by ID
+func (h *MockAPIHandler) GetProviderByID(c *gin.Context) {
+	providerID := c.Param("id")
+
+	provider := getMockProviderByID(providerID)
+	if provider == nil {
+		c.JSON(http.StatusNotFound, APIResponse{
+			Success: false,
+			Data:    nil,
+			Message: "Provider not found",
+			Meta: APIMeta{
+				Timestamp: "2024-01-15T10:30:00Z",
+			},
+		})
+		return
+	}
+
+	response := APIResponse{
+		Success: true,
+		Data:    provider,
+		Message: "Provider retrieved successfully",
+		Meta: APIMeta{
+			Timestamp: "2024-01-15T10:30:00Z",
+		},
+	}
+	c.JSON(http.StatusOK, response)
+}
+
+// GetFeaturedProviders returns featured providers for a category
+func (h *MockAPIHandler) GetFeaturedProviders(c *gin.Context) {
+	categoryID := c.Param("category")
+
+	providers := getMockServiceProvidersByCategory(categoryID)
+
+	// Filter only featured providers
+	featuredProviders := []models.ServiceProvider{}
+	for _, provider := range providers {
+		if provider.IsFeatured {
+			featuredProviders = append(featuredProviders, provider)
+		}
+	}
+
+	// Sort by admin position
+	sortedProviders := make([]models.ServiceProvider, len(featuredProviders))
+	copy(sortedProviders, featuredProviders)
+
+	for i := 0; i < len(sortedProviders)-1; i++ {
+		for j := i + 1; j < len(sortedProviders); j++ {
+			if sortedProviders[i].AdminPosition > sortedProviders[j].AdminPosition {
+				sortedProviders[i], sortedProviders[j] = sortedProviders[j], sortedProviders[i]
+			}
+		}
+	}
+
+	response := APIResponse{
+		Success: true,
+		Data:    sortedProviders,
+		Message: "Featured providers retrieved successfully",
+		Meta: APIMeta{
+			Timestamp: "2024-01-15T10:30:00Z",
+		},
+	}
+	c.JSON(http.StatusOK, response)
+}
+
+// Helper function to count featured providers
+func countFeaturedProviders(providers []models.ServiceProvider) int {
+	count := 0
+	for _, provider := range providers {
+		if provider.IsFeatured {
+			count++
+		}
+	}
+	return count
+}
+
+// Helper functions to access mock service provider data
+func getMockServiceProvidersByCategory(categoryID string) []models.ServiceProvider {
+	switch categoryID {
+	case "cat_hotels":
+		return []models.ServiceProvider{
+			{
+				ID:              "sp_hotel_001",
+				UserID:          "user_001",
+				BusinessName:    "Eko Hotels & Suites",
+				DisplayName:     "Eko Hotels & Suites",
+				Description:     "Luxury beachfront hotel with stunning ocean views and world-class amenities",
+				CategoryID:      "cat_hotels",
+				SubCategories:   []string{"luxury", "beachfront", "business"},
+				Phone:           "+234-1-2778000",
+				Email:           "eko.suites@ekohotels.com",
+				Website:         "https://ekohotels.com",
+				Address:         "1415 Adetokunbo Ademola Street, Victoria Island",
+				City:            "Lagos",
+				State:           "Lagos State",
+				BusinessType:    "company",
+				EstablishedYear: 1977,
+				EmployeesCount:  450,
+				ServiceAreas:    []string{"Lagos", "Victoria Island", "Ikoyi", "Lekki"},
+				ServiceRadius:   25.0,
+				Logo:            "https://cdn.tripsbook.com/logos/eko-hotels.png",
+				BannerImage:     "https://cdn.tripsbook.com/banners/eko-hotels.jpg",
+				Gallery: []string{
+					"https://cdn.tripsbook.com/images/hotels/eko/1.jpg",
+					"https://cdn.tripsbook.com/images/hotels/eko/2.jpg",
+					"https://cdn.tripsbook.com/images/hotels/eko/3.jpg",
+				},
+				IsVerified:         true,
+				VerificationStatus: "verified",
+				IsActive:           true,
+				IsFeatured:         true,
+				AdminPosition:      1,
+				PositionCategory:   "cat_hotels",
+				AverageRating:      4.6,
+				TotalReviews:       1247,
+				RatingBreakdown:    map[int]int{5: 789, 4: 312, 3: 98, 2: 35, 1: 13},
+				TotalServices:      8,
+				ActiveServices:     8,
+				CompletedBookings:  8934,
+				CreatedAt:          time.Now().AddDate(-3, 0, 0),
+				UpdatedAt:          time.Now().Add(-24 * time.Hour),
+				LastActiveAt:       time.Now().Add(-2 * time.Hour),
+			},
+			{
+				ID:              "sp_hotel_002",
+				UserID:          "user_002",
+				BusinessName:    "Federal Palace Hotel",
+				DisplayName:     "Federal Palace Hotel",
+				Description:     "Historic luxury hotel with modern amenities and rich cultural heritage",
+				CategoryID:      "cat_hotels",
+				SubCategories:   []string{"luxury", "historic", "business"},
+				Phone:           "+234-1-2611000",
+				Email:           "info@federalpalacehotel.com",
+				Website:         "https://federalpalacehotel.com",
+				Address:         "1-3 Ahmadu Bello Way, Victoria Island",
+				City:            "Lagos",
+				State:           "Lagos State",
+				BusinessType:    "company",
+				EstablishedYear: 1960,
+				EmployeesCount:  380,
+				ServiceAreas:    []string{"Lagos", "Victoria Island", "Ikoyi"},
+				ServiceRadius:   20.0,
+				Logo:            "https://cdn.tripsbook.com/logos/federal-palace.png",
+				BannerImage:     "https://cdn.tripsbook.com/banners/federal-palace.jpg",
+				Gallery: []string{
+					"https://cdn.tripsbook.com/images/hotels/federal/1.jpg",
+					"https://cdn.tripsbook.com/images/hotels/federal/2.jpg",
+				},
+				IsVerified:         true,
+				VerificationStatus: "verified",
+				IsActive:           true,
+				IsFeatured:         true,
+				AdminPosition:      2,
+				PositionCategory:   "cat_hotels",
+				AverageRating:      4.5,
+				TotalReviews:       987,
+				RatingBreakdown:    map[int]int{5: 623, 4: 245, 3: 87, 2: 22, 1: 10},
+				TotalServices:      6,
+				ActiveServices:     6,
+				CompletedBookings:  6234,
+				CreatedAt:          time.Now().AddDate(-5, 0, 0),
+				UpdatedAt:          time.Now().Add(-48 * time.Hour),
+				LastActiveAt:       time.Now().Add(-4 * time.Hour),
+			},
+		}
+	case "cat_restaurants":
+		return []models.ServiceProvider{
+			{
+				ID:              "sp_restaurant_001",
+				UserID:          "user_101",
+				BusinessName:    "Terra Kulture",
+				DisplayName:     "Terra Kulture",
+				Description:     "Contemporary Nigerian cuisine with cultural experience and art gallery",
+				CategoryID:      "cat_restaurants",
+				SubCategories:   []string{"nigerian", "contemporary", "cultural"},
+				Phone:           "+234-1-2776322",
+				Email:           "info@terrakulture.com",
+				Website:         "https://terrakulture.com",
+				Address:         "1376 Tiamiyu Savage Street, Victoria Island",
+				City:            "Lagos",
+				State:           "Lagos State",
+				BusinessType:    "company",
+				EstablishedYear: 2004,
+				EmployeesCount:  85,
+				ServiceAreas:    []string{"Lagos", "Victoria Island", "Ikoyi"},
+				ServiceRadius:   15.0,
+				Logo:            "https://cdn.tripsbook.com/logos/terra-kulture.png",
+				BannerImage:     "https://cdn.tripsbook.com/banners/terra-kulture.jpg",
+				Gallery: []string{
+					"https://cdn.tripsbook.com/images/restaurants/terra/1.jpg",
+					"https://cdn.tripsbook.com/images/restaurants/terra/2.jpg",
+				},
+				IsVerified:         true,
+				VerificationStatus: "verified",
+				IsActive:           true,
+				IsFeatured:         true,
+				AdminPosition:      1,
+				PositionCategory:   "cat_restaurants",
+				AverageRating:      4.5,
+				TotalReviews:       892,
+				RatingBreakdown:    map[int]int{5: 567, 4: 234, 3: 67, 2: 18, 1: 6},
+				TotalServices:      4,
+				ActiveServices:     4,
+				CompletedBookings:  12456,
+				CreatedAt:          time.Now().AddDate(-8, 0, 0),
+				UpdatedAt:          time.Now().Add(-6 * time.Hour),
+				LastActiveAt:       time.Now().Add(-30 * time.Minute),
+			},
+		}
+	case "cat_transport":
+		return []models.ServiceProvider{
+			{
+				ID:              "sp_transport_001",
+				UserID:          "user_201",
+				BusinessName:    "Uber Premium",
+				DisplayName:     "Uber Premium",
+				Description:     "Premium ride service with professional drivers and luxury vehicles",
+				CategoryID:      "cat_transport",
+				SubCategories:   []string{"ride-hailing", "premium", "airport-transfer"},
+				Phone:           "+234-800-000-0000",
+				Email:           "premium@uber.com",
+				Website:         "https://uber.com/premium",
+				Address:         "Tech Hub, Yaba",
+				City:            "Lagos",
+				State:           "Lagos State",
+				BusinessType:    "franchise",
+				EstablishedYear: 2014,
+				EmployeesCount:  1200,
+				ServiceAreas:    []string{"Lagos", "Abuja", "Port Harcourt", "Kano"},
+				ServiceRadius:   50.0,
+				Logo:            "https://cdn.tripsbook.com/logos/uber-premium.png",
+				BannerImage:     "https://cdn.tripsbook.com/banners/uber-premium.jpg",
+				Gallery: []string{
+					"https://cdn.tripsbook.com/images/transport/uber/1.jpg",
+					"https://cdn.tripsbook.com/images/transport/uber/2.jpg",
+				},
+				IsVerified:         true,
+				VerificationStatus: "verified",
+				IsActive:           true,
+				IsFeatured:         true,
+				AdminPosition:      1,
+				PositionCategory:   "cat_transport",
+				AverageRating:      4.7,
+				TotalReviews:       2543,
+				RatingBreakdown:    map[int]int{5: 1892, 4: 456, 3: 145, 2: 34, 1: 16},
+				TotalServices:      5,
+				ActiveServices:     5,
+				CompletedBookings:  45678,
+				CreatedAt:          time.Now().AddDate(-6, 0, 0),
+				UpdatedAt:          time.Now().Add(-1 * time.Hour),
+				LastActiveAt:       time.Now().Add(-15 * time.Minute),
+			},
+		}
+	default:
+		return []models.ServiceProvider{}
+	}
+}
+
+func getMockProviderByID(providerID string) *models.ServiceProvider {
+	allProviders := []models.ServiceProvider{}
+
+	// Add all providers from all categories
+	allProviders = append(allProviders, getMockServiceProvidersByCategory("cat_hotels")...)
+	allProviders = append(allProviders, getMockServiceProvidersByCategory("cat_restaurants")...)
+	allProviders = append(allProviders, getMockServiceProvidersByCategory("cat_transport")...)
+
+	for _, provider := range allProviders {
+		if provider.ID == providerID {
+			return &provider
+		}
+	}
+	return nil
 }
